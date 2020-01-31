@@ -124,7 +124,7 @@ namespace IntelligentData
 
 		#region Save Changes
 
-		private TResult ProcessModelsAndThen<TResult>(Func<TResult> save)
+		private TResult ProcessEntitiesAndThen<TResult>(Func<TResult> save)
 		{
 			// technically we should check for a "disposed" flag from the base, but we don't have access to the private variable, so here we are.
 			if (ChangeTracker.AutoDetectChangesEnabled) ChangeTracker.DetectChanges();
@@ -163,7 +163,7 @@ namespace IntelligentData
 
 		/// <inheritdoc />
 		public override int SaveChanges(bool acceptAllChangesOnSuccess)
-			=> ProcessModelsAndThen(() => base.SaveChanges(acceptAllChangesOnSuccess));
+			=> ProcessEntitiesAndThen(() => base.SaveChanges(acceptAllChangesOnSuccess));
 
 		/// <inheritdoc />
 		public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = new CancellationToken())
@@ -171,7 +171,7 @@ namespace IntelligentData
 
 		/// <inheritdoc />
 		public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = new CancellationToken())
-			=> ProcessModelsAndThen(() => base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken));
+			=> ProcessEntitiesAndThen(() => base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken));
 
 		#endregion
 
