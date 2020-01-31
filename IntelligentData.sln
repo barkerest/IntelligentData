@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntelligentData", "IntelligentData\IntelligentData.csproj", "{CEDDD6F9-85B6-4735-952E-57F52D2A1C21}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntelligentData.Tests", "IntelligentData.Tests\IntelligentData.Tests.csproj", "{5FD9C3FD-94C0-4865-BEDA-3DE0B0766225}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CEDDD6F9-85B6-4735-952E-57F52D2A1C21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEDDD6F9-85B6-4735-952E-57F52D2A1C21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEDDD6F9-85B6-4735-952E-57F52D2A1C21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEDDD6F9-85B6-4735-952E-57F52D2A1C21}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5FD9C3FD-94C0-4865-BEDA-3DE0B0766225}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5FD9C3FD-94C0-4865-BEDA-3DE0B0766225}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5FD9C3FD-94C0-4865-BEDA-3DE0B0766225}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5FD9C3FD-94C0-4865-BEDA-3DE0B0766225}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
