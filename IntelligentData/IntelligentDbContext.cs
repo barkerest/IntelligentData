@@ -5,9 +5,11 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using IntelligentData.Enums;
+using IntelligentData.Extensions;
 using IntelligentData.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace IntelligentData
 {
@@ -100,7 +102,7 @@ namespace IntelligentData
 
 		#endregion
 
-		#region SeedData
+		#region Seed Data
 
 		/// <summary>
 		/// Puts the context into an insert-only state.  All entities will allow insert but not update or delete.
@@ -122,6 +124,44 @@ namespace IntelligentData
 
 		#endregion
 
+		#region Honor String Format
+
+		private void HonorStringFormatConversions(IEnumerable<EntityEntry> entries)
+		{
+			foreach (var entry in entries)
+			{
+				var entity = entry.Entity;
+				foreach (var property in entry.Metadata.GetProperties()
+				                              .Where(p => p.HasStringFormat() && p.ClrType == typeof(string)))
+				{
+					var fmt = property.GetStringFormatProvider(this.GetInfrastructure());
+					if (fmt is null) continue;
+					var val = property.PropertyInfo.GetValue(entity) as string;
+					if (string.IsNullOrEmpty(val)) continue;
+
+					var fmtVal = fmt(entity, val, this);
+					if (val == fmtVal) continue;
+
+					property.PropertyInfo.SetValue(entity, fmtVal);
+					entry.Property(property.Name).IsModified = true;
+				}
+			}
+		}
+		
+		#endregion
+
+		#region Honor Runtime Default Value
+
+		
+
+		#endregion
+
+		#region Honor Auto Update Value
+
+		
+
+		#endregion
+		
 		#region Save Changes
 
 		private TResult ProcessEntitiesAndThen<TResult>(Func<TResult> save)
@@ -175,6 +215,47 @@ namespace IntelligentData
 
 		#endregion
 
+		#region On Model Creating
 
+		protected override void OnModelCreating(ModelBuilder modelBuilder)
+		{
+			base.OnModelCreating(modelBuilder);
+
+			foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+			{
+				if (!(entityType.ClrType is Type et)) continue;
+				if (entityType.IsKeyless) continue;
+
+				var xt = modelBuilder.Entity(et);
+
+				foreach (var property in entityType.GetProperties())
+				{
+					if (property.PropertyInfo.GetCustomAttributes()
+					            .OfType<IRuntimeDefaultValueProvider>()
+					            .FirstOrDefault() is IRuntimeDefaultValueProvider runtimeDefaultValueProvider)
+					{
+						property.HasRuntimeDefault(runtimeDefaultValueProvider);
+					}
+					
+					if (property.PropertyInfo.GetCustomAttributes()
+					            .OfType<IAutoUpdateValueProvider>()
+					            .FirstOrDefault() is IAutoUpdateValueProvider autoUpdateValueProvider)
+					{
+						property.HasAutoUpdate(autoUpdateValueProvider);
+					}
+
+					if (property.PropertyInfo.GetCustomAttributes()
+					            .OfType<IStringFormatProvider>()
+					            .FirstOrDefault() is IStringFormatProvider stringFormatProvider)
+					{
+						property.HasStringFormat(stringFormatProvider);
+					}
+				}
+
+				// TODO: Table modifications?
+			}
+		}
+
+		#endregion
 	}
 }
