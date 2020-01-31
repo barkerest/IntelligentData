@@ -3,6 +3,12 @@
 This is an extension library for EntityFramework that adds some intelligence to models and contexts.
 
 
+## Features
+
+* __Access Control__  
+  The ability to limit insert, update, and delete activity in the DB context.
+
+
 ## Usage
 
 ```sh
@@ -15,7 +21,6 @@ public class MyDbContext : IntelligentDbContext
     ...
 }
 ```
-
 
 
 
