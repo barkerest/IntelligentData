@@ -3,12 +3,12 @@
 namespace IntelligentData.Interfaces
 {
 	/// <summary>
-	/// Marks an entity type as providing an access level per instance.
+	/// Provides the access level for an entity.
 	/// </summary>
-	public interface IEntityWithAccess
+	public interface IEntityAccessProvider
 	{
 		/// <summary>
-		/// Gets the access level for this instance.
+		/// Gets the access level for an entity.
 		/// </summary>
 		AccessLevel EntityAccessLevel { get; }
 	}

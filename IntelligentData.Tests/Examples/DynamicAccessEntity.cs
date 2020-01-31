@@ -5,7 +5,7 @@ using IntelligentData.Interfaces;
 
 namespace IntelligentData.Tests.Examples
 {
-	public class DynamicAccessEntity : IEntityWithAccess, IExampleEntity
+	public class DynamicAccessEntity : IEntityAccessProvider, IExampleEntity
 	{
 		[Key]
 		[DatabaseGenerated(DatabaseGeneratedOption.Identity)]

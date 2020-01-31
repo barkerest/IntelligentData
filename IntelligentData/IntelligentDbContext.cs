@@ -38,9 +38,9 @@ namespace IntelligentData
 				var level = AccessLevel.ReadOnly;
 
 				// default access comes from attributes and is always the most permissive set from the attributes.
-				foreach (var attr in entityType.GetCustomAttributes().OfType<IAccessAttribute>())
+				foreach (var attr in entityType.GetCustomAttributes().OfType<IEntityAccessProvider>())
 				{
-					level |= attr.Level;
+					level |= attr.EntityAccessLevel;
 				}
 
 				_defaultAccessLevels[entityType] = level;
@@ -59,7 +59,7 @@ namespace IntelligentData
 
 			if (_allowSeedData) return AccessLevel.Insert;
 
-			if (entity is IEntityWithAccess e) return e.EntityAccessLevel;
+			if (entity is IEntityAccessProvider e) return e.EntityAccessLevel;
 
 			return DefaultAccessForEntityType(entity.GetType());
 		}
