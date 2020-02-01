@@ -44,6 +44,8 @@ namespace IntelligentData.Tests.Examples
         public DbSet<ReadUpdateDeleteEntity>       ReadUpdateDeleteEntities       { get; set; }
         public DbSet<ReadInsertUpdateDeleteEntity> ReadInsertUpdateDeleteEntities { get; set; }
         public DbSet<DynamicAccessEntity>          DynamicAccessEntities          { get; set; }
+        public DbSet<StringFormatExample>          StringFormatExamples           { get; set; }
+        public DbSet<AutoDateExample>              AutoDateExamples               { get; set; }
 
 
         #region Create Context

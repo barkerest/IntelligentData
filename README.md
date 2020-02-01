@@ -7,7 +7,12 @@ This is an extension library for EntityFramework that adds some intelligence to 
 
 * __Access Control__  
   The ability to limit insert, update, and delete activity in the DB context.
-
+* __String Formatting__  
+  String formats can easily be applied to properties when they are saved.
+* __Runtime Defaults for Properties__  
+  Provide default values for properties based on runtime execution (eg - current date/time).
+* __Auto-update Properties__  
+  Generates a new value for a property automatically when an entity is saved (eg - current date/time).
 
 ## Usage
 
