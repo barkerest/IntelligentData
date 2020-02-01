@@ -15,6 +15,8 @@ namespace IntelligentData.Tests.Examples
        
         public int SomeValue { get; set; }
         
+        public int SaveCount { get; set; }
+        
         [RuntimeDefaultNow]
         public DateTime CreatedInstant { get; set; }
         

@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using IntelligentData.Extensions;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -46,6 +47,17 @@ namespace IntelligentData.Tests.Examples
         public DbSet<DynamicAccessEntity>          DynamicAccessEntities          { get; set; }
         public DbSet<StringFormatExample>          StringFormatExamples           { get; set; }
         public DbSet<AutoDateExample>              AutoDateExamples               { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder
+                .Entity<AutoDateExample>()
+                .Property(x => x.SaveCount)
+                .Metadata
+                .HasAutoUpdate((e, v, c) => (int) v + 1);
+        }
 
 
         #region Create Context

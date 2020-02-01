@@ -5,11 +5,11 @@ This is an extension library for EntityFramework that adds some intelligence to 
 
 ## Features
 
-* __Access Control__  
+* __Access Control__    
   The ability to limit insert, update, and delete activity in the DB context.
-* __String Formatting__  
+* __String Formatting__    
   String formats can easily be applied to properties when they are saved.
-* __Runtime Defaults for Properties__  
+* __Runtime Defaults for Properties__    
   Provide default values for properties based on runtime execution (eg - current date/time).
 * __Auto-update Properties__  
   Generates a new value for a property automatically when an entity is saved (eg - current date/time).
@@ -40,11 +40,25 @@ public class MyEntity
     // Set a timestamp when the record is modified.
     [AutoUpdateToNow]
     public DateTime LastModified { get; set; }
+
+    public int SaveCount { get; set; }
 }
 
 public class MyDbContext : IntelligentDbContext
 {
     public DbSet<MyEntity> MyEntities { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+        
+        // add a custom delegate as the auto-update provider.
+        builder
+            .Entity<MyEntity>()
+            .Property(x => x.SaveCount)
+            .Metadata
+            .HasAutoUpdate((e, v, c) => (int) v + 1);
+    }
 }
 ```
 
