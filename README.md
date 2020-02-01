@@ -21,9 +21,30 @@ dotnet add package IntelligentData
 ```
 
 ```c#
+
+// Allow entities to be created and updated, but not deleted.
+[Access(AccessLevel.Insert | AccessLevel.Update)]
+public class MyEntity
+{
+    [Key]
+    public int ID { get; set; }
+
+    // Store the user name in upper case.
+    [UpperCase]
+    public string UserName { get; set; }
+    
+    // Set a timestamp when the record is created.
+    [RuntimeDefaultNow]
+    public DateTime Created { get; set; }
+    
+    // Set a timestamp when the record is modified.
+    [AutoUpdateToNow]
+    public DateTime LastModified { get; set; }
+}
+
 public class MyDbContext : IntelligentDbContext
 {
-    ...
+    public DbSet<MyEntity> MyEntities { get; set; }
 }
 ```
 
