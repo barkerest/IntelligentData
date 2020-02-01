@@ -5,15 +5,15 @@ using IntelligentData.Enums;
 
 namespace IntelligentData.Tests.Examples
 {
-	[Access(AccessLevel.FullAccess)]
-	public class ReadInsertUpdateDeleteEntity : IExampleEntity
-	{
-		[Key]
-		[DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-		public int ID { get; set; }
-		
-		[Required]
-		[StringLength(100)]
-		public string Name { get; set; }
-	}
+    [Access(AccessLevel.FullAccess)]
+    public class ReadInsertUpdateDeleteEntity : IExampleEntity
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int ID { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; }
+    }
 }

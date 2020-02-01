@@ -5,16 +5,16 @@ using IntelligentData.Interfaces;
 
 namespace IntelligentData.Tests.Examples
 {
-	public class DynamicAccessEntity : IEntityAccessProvider, IExampleEntity
-	{
-		[Key]
-		[DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-		public int ID { get; set; }
-		
-		[Required]
-		[StringLength(100)]
-		public string Name { get; set; }
+    public class DynamicAccessEntity : IEntityAccessProvider, IExampleEntity
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int ID { get; set; }
 
-		public AccessLevel EntityAccessLevel => (AccessLevel) (ID % 8);
-	}
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; }
+
+        public AccessLevel EntityAccessLevel => (AccessLevel) (ID % 8);
+    }
 }
