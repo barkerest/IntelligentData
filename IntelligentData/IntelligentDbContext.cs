@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using IntelligentData.Attributes;
 using IntelligentData.Enums;
 using IntelligentData.Extensions;
 using IntelligentData.Interfaces;
@@ -11,25 +12,29 @@ using IntelligentData.Internal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace IntelligentData
 {
     /// <summary>
     /// The base class used for intelligent DB contexts.
     /// </summary>
-    public abstract class IntelligentDbContext<TUserId> : DbContext
+    public abstract class IntelligentDbContext : DbContext
     {
-        private readonly IUserInformationProvider<TUserId> _currentUserProvider;
+        /// <summary>
+        /// The current user provider for the context.
+        /// </summary>
+        public IUserInformationProvider CurrentUserProvider { get; }
 
         /// <summary>
         /// Constructs the intelligent DB context.
         /// </summary>
         /// <param name="options">The options to construct the DB context with.</param>
         /// <param name="currentUserProvider">The current user provider.</param>
-        protected IntelligentDbContext(DbContextOptions options, IUserInformationProvider<TUserId> currentUserProvider)
+        protected IntelligentDbContext(DbContextOptions options, IUserInformationProvider currentUserProvider)
             : base(options)
         {
-            _currentUserProvider = currentUserProvider ?? new Nobody<TUserId>();
+            CurrentUserProvider = currentUserProvider ?? new Nobody();
         }
 
         #region Access Control
@@ -311,6 +316,32 @@ namespace IntelligentData
                     // TODO: Process additional attributes?
                 }
 
+                if (typeof(ITrackedEntity).IsAssignableFrom(et))
+                {
+                    entityType.FindProperty(nameof(ITrackedEntity.CreatedAt))
+                              .HasRuntimeDefault<RuntimeDefaultNowAttribute>();
+                    entityType.FindProperty(nameof(ITrackedEntity.LastModifiedAt))
+                              .HasAutoUpdate<AutoUpdateToNowAttribute>();
+
+                    if (typeof(ITrackedEntityWithUserName).IsAssignableFrom(et))
+                    {
+                        entityType.FindProperty(nameof(ITrackedEntityWithUserName.CreatedBy))
+                                  .HasRuntimeDefault<RuntimeDefaultCurrentUserNameAttribute>();
+                        entityType.FindProperty(nameof(ITrackedEntityWithUserName.LastModifiedBy))
+                                  .HasAutoUpdate<AutoUpdateToCurrentUserNameAttribute>();
+                    }
+
+                    if (entityType.FindProperty(nameof(ITrackedEntityWithUserID<int>.CreatedByID)) is IMutableProperty createdById)
+                    {
+                        createdById.HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute() {UserIdType = createdById.PropertyInfo.PropertyType});
+                    }
+
+                    if (entityType.FindProperty(nameof(ITrackedEntityWithUserID<int>.LastModifiedByID)) is IMutableProperty modifiedById)
+                    {
+                        modifiedById.HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute() {UserIdType = modifiedById.PropertyInfo.PropertyType});
+                    }
+                }
+
                 // TODO: Table modifications?
             }
         }
@@ -318,20 +349,5 @@ namespace IntelligentData
         #endregion
     }
 
-    /// <summary>
-    /// The base class used for intelligent DB contexts.
-    /// </summary>
-    public abstract class IntelligentDbContext : IntelligentDbContext<int>
-    {
-        /// <summary>
-        /// Constructs the intelligent DB context.
-        /// </summary>
-        /// <param name="options">The options to construct the DB context with.</param>
-        /// <param name="currentUserProvider">The current user provider.</param>
-        protected IntelligentDbContext(DbContextOptions options, IUserInformationProvider<int> currentUserProvider)
-            : base(options, currentUserProvider)
-        {
-        }
-    }
-
+    
 }

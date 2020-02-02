@@ -31,7 +31,7 @@ namespace IntelligentData.Tests.Examples
 
         public static readonly string NewName = "Tasmanian Devil";
 
-        public ExampleContext(DbContextOptions options, IUserInformationProvider<int> currentUserProvider)
+        public ExampleContext(DbContextOptions options, IUserInformationProvider currentUserProvider)
             : base(options, currentUserProvider)
         {
         }
@@ -90,7 +90,7 @@ namespace IntelligentData.Tests.Examples
             return builder.Options;
         }
 
-        public static ExampleContext CreateContext(bool seed = false, IUserInformationProvider<int> currentUserProvider = null)
+        public static ExampleContext CreateContext(bool seed = false, IUserInformationProvider currentUserProvider = null)
         {
             var options = CreateOptions();
             using (var context = new ExampleContext(options, currentUserProvider))
@@ -103,7 +103,7 @@ namespace IntelligentData.Tests.Examples
             return ret;
         }
 
-        public static ExampleContext CreateContext(out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider<int> currentUserProvider = null)
+        public static ExampleContext CreateContext(out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider currentUserProvider = null)
         {
             var options = CreateOptions();
             using (var context = new ExampleContext(options, currentUserProvider))
