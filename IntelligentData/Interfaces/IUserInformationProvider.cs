@@ -12,6 +12,7 @@ namespace IntelligentData.Interfaces
         /// </summary>
         /// <param name="ofType">The type we want the user ID to be returned as (or null for actual value).</param>
         /// <returns>Returns the ID of the current user.</returns>
+        /// <exception cref="InvalidCastException">Throws an invalid cast if the ID type cannot be converted to the desired return type.</exception>
         object GetUserID(Type ofType);
         
         /// <summary>

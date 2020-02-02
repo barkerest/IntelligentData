@@ -37,16 +37,64 @@ namespace IntelligentData.Interfaces
     /// <summary>
     /// A common entity with created/modified date/time and user tracking.
     /// </summary>
-    public interface ITrackedEntityWithUserID<TUserId> : ITrackedEntity
+    public interface ITrackedEntityWithInt32UserID : ITrackedEntity
     {
         /// <summary>
         /// The ID of the user who created the entity.
         /// </summary>
-        TUserId CreatedByID { get; set; }
+        int CreatedByID { get; set; }
         
         /// <summary>
         /// The ID of the user who last modified the entity.
         /// </summary>
-        TUserId LastModifiedByID { get; set; }
+        int LastModifiedByID { get; set; }
+    }
+    
+    /// <summary>
+    /// A common entity with created/modified date/time and user tracking.
+    /// </summary>
+    public interface ITrackedEntityWithInt64UserID : ITrackedEntity
+    {
+        /// <summary>
+        /// The ID of the user who created the entity.
+        /// </summary>
+        long CreatedByID { get; set; }
+        
+        /// <summary>
+        /// The ID of the user who last modified the entity.
+        /// </summary>
+        long LastModifiedByID { get; set; }
+    }
+    
+    /// <summary>
+    /// A common entity with created/modified date/time and user tracking.
+    /// </summary>
+    public interface ITrackedEntityWithGuidUserID : ITrackedEntity
+    {
+        /// <summary>
+        /// The ID of the user who created the entity.
+        /// </summary>
+        Guid CreatedByID { get; set; }
+        
+        /// <summary>
+        /// The ID of the user who last modified the entity.
+        /// </summary>
+        Guid LastModifiedByID { get; set; }
+    }
+    
+    /// <summary>
+    /// A common entity with created/modified date/time and user tracking.
+    /// </summary>
+    public interface ITrackedEntityWithStringUserID : ITrackedEntity
+    {
+        /// <summary>
+        /// The ID of the user who created the entity.
+        /// </summary>
+        string CreatedByID { get; set; }
+        
+        /// <summary>
+        /// The ID of the user who last modified the entity.
+        /// </summary>
+        string LastModifiedByID { get; set; }
     }
 }

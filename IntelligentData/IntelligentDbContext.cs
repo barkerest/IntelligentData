@@ -202,7 +202,7 @@ namespace IntelligentData
                 {
                     var provider = property.GetAutoUpdateValueProvider(this.GetInfrastructure());
                     if (provider is null) continue;
-                    var val = property.PropertyInfo.GetValue(entity);
+                    var val    = property.PropertyInfo.GetValue(entity);
                     var newVal = provider(entity, val, this);
                     if (newVal == val) continue;
 
@@ -242,7 +242,7 @@ namespace IntelligentData
                 records.RemoveAll(x => x.State == EntityState.Deleted);
 
                 // TODO: Additional processing of inserted and updated records.
-                
+
                 HonorRuntimeDefaultProperties(records);
                 HonorAutoUpdateProperties(records);
                 HonorStringFormatProperties(records);
@@ -312,7 +312,7 @@ namespace IntelligentData
                     {
                         property.HasStringFormat(stringFormatProvider);
                     }
-                    
+
                     // TODO: Process additional attributes?
                 }
 
@@ -331,14 +331,36 @@ namespace IntelligentData
                                   .HasAutoUpdate<AutoUpdateToCurrentUserNameAttribute>();
                     }
 
-                    if (entityType.FindProperty(nameof(ITrackedEntityWithUserID<int>.CreatedByID)) is IMutableProperty createdById)
+                    if (typeof(ITrackedEntityWithInt32UserID).IsAssignableFrom(et))
                     {
-                        createdById.HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute() {UserIdType = createdById.PropertyInfo.PropertyType});
+                        entityType.FindProperty(nameof(ITrackedEntityWithInt32UserID.CreatedByID))
+                                  .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute() {UserIdType = typeof(int)});
+                        entityType.FindProperty(nameof(ITrackedEntityWithInt32UserID.LastModifiedByID))
+                                  .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute() {UserIdType = typeof(int)});
                     }
 
-                    if (entityType.FindProperty(nameof(ITrackedEntityWithUserID<int>.LastModifiedByID)) is IMutableProperty modifiedById)
+                    if (typeof(ITrackedEntityWithInt64UserID).IsAssignableFrom(et))
                     {
-                        modifiedById.HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute() {UserIdType = modifiedById.PropertyInfo.PropertyType});
+                        entityType.FindProperty(nameof(ITrackedEntityWithInt64UserID.CreatedByID))
+                                  .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute() {UserIdType = typeof(long)});
+                        entityType.FindProperty(nameof(ITrackedEntityWithInt64UserID.LastModifiedByID))
+                                  .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute() {UserIdType = typeof(long)});
+                    }
+
+                    if (typeof(ITrackedEntityWithGuidUserID).IsAssignableFrom(et))
+                    {
+                        entityType.FindProperty(nameof(ITrackedEntityWithGuidUserID.CreatedByID))
+                                  .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute() {UserIdType = typeof(Guid)});
+                        entityType.FindProperty(nameof(ITrackedEntityWithGuidUserID.LastModifiedByID))
+                                  .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute() {UserIdType = typeof(Guid)});
+                    }
+
+                    if (typeof(ITrackedEntityWithStringUserID).IsAssignableFrom(et))
+                    {
+                        entityType.FindProperty(nameof(ITrackedEntityWithStringUserID.CreatedByID))
+                                  .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute() {UserIdType = typeof(string)});
+                        entityType.FindProperty(nameof(ITrackedEntityWithStringUserID.LastModifiedByID))
+                                  .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute() {UserIdType = typeof(string)});
                     }
                 }
 
@@ -348,6 +370,4 @@ namespace IntelligentData
 
         #endregion
     }
-
-    
 }

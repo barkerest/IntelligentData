@@ -56,8 +56,7 @@ public class MyDbContext : IntelligentDbContext
         builder
             .Entity<MyEntity>()
             .Property(x => x.SaveCount)
-            .Metadata
-            .HasAutoUpdate((e, v, c) => (int) v + 1);
+            .HasAutoUpdate(v => (int)v + 1);
     }
 }
 ```

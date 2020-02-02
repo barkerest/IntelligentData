@@ -56,8 +56,7 @@ namespace IntelligentData.Tests.Examples
             modelBuilder
                 .Entity<AutoDateExample>()
                 .Property(x => x.SaveCount)
-                .Metadata
-                .HasAutoUpdate((e, v, c) => (int) v + 1);
+                .HasAutoUpdate(v => (int)v + 1);
         }
 
 
