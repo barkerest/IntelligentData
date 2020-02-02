@@ -1,5 +1,6 @@
 ﻿using System;
 using IntelligentData.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace IntelligentData.Attributes
 {
@@ -10,7 +11,7 @@ namespace IntelligentData.Attributes
     public sealed class LowerCaseAttribute : Attribute, IStringFormatProvider
     {
         /// <inheritdoc />
-        public string FormatValue(object entity, string currentValue, IntelligentDbContext context)
+        public string FormatValue(object entity, string currentValue, DbContext context)
         {
             return string.IsNullOrEmpty(currentValue) ? "" : currentValue.ToLower();
         }

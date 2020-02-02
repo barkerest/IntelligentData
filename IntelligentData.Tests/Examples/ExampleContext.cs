@@ -1,4 +1,5 @@
 ﻿using IntelligentData.Extensions;
+using IntelligentData.Interfaces;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -30,8 +31,8 @@ namespace IntelligentData.Tests.Examples
 
         public static readonly string NewName = "Tasmanian Devil";
 
-        public ExampleContext(DbContextOptions options)
-            : base(options)
+        public ExampleContext(DbContextOptions options, IUserInformationProvider<int> currentUserProvider)
+            : base(options, currentUserProvider)
         {
         }
 
@@ -89,30 +90,30 @@ namespace IntelligentData.Tests.Examples
             return builder.Options;
         }
 
-        public static ExampleContext CreateContext(bool seed = false)
+        public static ExampleContext CreateContext(bool seed = false, IUserInformationProvider<int> currentUserProvider = null)
         {
             var options = CreateOptions();
-            using (var context = new ExampleContext(options))
+            using (var context = new ExampleContext(options, currentUserProvider))
             {
                 context.Database.EnsureCreated();
             }
 
-            var ret = new ExampleContext(options);
+            var ret = new ExampleContext(options, currentUserProvider);
             if (seed) ret.Seed();
             return ret;
         }
 
-        public static ExampleContext CreateContext(out ExampleContext secondaryContext, bool seed = false)
+        public static ExampleContext CreateContext(out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider<int> currentUserProvider = null)
         {
             var options = CreateOptions();
-            using (var context = new ExampleContext(options))
+            using (var context = new ExampleContext(options, currentUserProvider))
             {
                 context.Database.EnsureCreated();
             }
 
-            var ret = new ExampleContext(options);
+            var ret = new ExampleContext(options, currentUserProvider);
             if (seed) ret.Seed();
-            secondaryContext = new ExampleContext(options);
+            secondaryContext = new ExampleContext(options, currentUserProvider);
             return ret;
         }
 

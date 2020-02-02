@@ -1,4 +1,6 @@
-﻿namespace IntelligentData.Interfaces
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace IntelligentData.Interfaces
 {
     /// <summary>
     /// Defines a provider for an automatically updated property.
@@ -12,6 +14,6 @@
         /// <param name="currentValue">The current value of the property.</param>
         /// <param name="context">The context the modification is occurring within.</param>
         /// <returns>Returns the new value for the property.</returns>
-        object NewValue(object entity, object currentValue, IntelligentDbContext context);
+        object NewValue(object entity, object currentValue, DbContext context);
     }
 }

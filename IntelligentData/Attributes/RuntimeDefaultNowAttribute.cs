@@ -1,5 +1,6 @@
 ﻿using System;
 using IntelligentData.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace IntelligentData.Attributes
 {
@@ -15,7 +16,7 @@ namespace IntelligentData.Attributes
         public bool IncludeTime { get; set; } = true;
         
         /// <inheritdoc />
-        public object ValueOrDefault(object entity, object currentValue, IntelligentDbContext context)
+        public object ValueOrDefault(object entity, object currentValue, DbContext context)
         {
             var def = IncludeTime ? DateTime.Now : DateTime.Today;
             

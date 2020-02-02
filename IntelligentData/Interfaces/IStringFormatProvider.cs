@@ -1,4 +1,6 @@
-﻿namespace IntelligentData.Interfaces
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace IntelligentData.Interfaces
 {
     /// <summary>
     /// Defines the provider for a string format.
@@ -12,6 +14,6 @@
         /// <param name="currentValue">The current value of the property.</param>
         /// <param name="context">The context the entity is being saved into.</param>
         /// <returns>Returns the formatted string value for the property.</returns>
-        string FormatValue(object entity, string currentValue, IntelligentDbContext context);
+        string FormatValue(object entity, string currentValue, DbContext context);
     }
 }

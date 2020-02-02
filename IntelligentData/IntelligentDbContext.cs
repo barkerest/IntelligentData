@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using IntelligentData.Enums;
 using IntelligentData.Extensions;
 using IntelligentData.Interfaces;
+using IntelligentData.Internal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -16,15 +17,19 @@ namespace IntelligentData
     /// <summary>
     /// The base class used for intelligent DB contexts.
     /// </summary>
-    public abstract class IntelligentDbContext : DbContext
+    public abstract class IntelligentDbContext<TUserId> : DbContext
     {
+        private readonly IUserInformationProvider<TUserId> _currentUserProvider;
+
         /// <summary>
         /// Constructs the intelligent DB context.
         /// </summary>
         /// <param name="options">The options to construct the DB context with.</param>
-        protected IntelligentDbContext(DbContextOptions options)
+        /// <param name="currentUserProvider">The current user provider.</param>
+        protected IntelligentDbContext(DbContextOptions options, IUserInformationProvider<TUserId> currentUserProvider)
             : base(options)
         {
+            _currentUserProvider = currentUserProvider ?? new Nobody<TUserId>();
         }
 
         #region Access Control
@@ -312,4 +317,21 @@ namespace IntelligentData
 
         #endregion
     }
+
+    /// <summary>
+    /// The base class used for intelligent DB contexts.
+    /// </summary>
+    public abstract class IntelligentDbContext : IntelligentDbContext<int>
+    {
+        /// <summary>
+        /// Constructs the intelligent DB context.
+        /// </summary>
+        /// <param name="options">The options to construct the DB context with.</param>
+        /// <param name="currentUserProvider">The current user provider.</param>
+        protected IntelligentDbContext(DbContextOptions options, IUserInformationProvider<int> currentUserProvider)
+            : base(options, currentUserProvider)
+        {
+        }
+    }
+
 }
