@@ -12,11 +12,6 @@ namespace IntelligentData.Interfaces
         /// </summary>
         /// <returns>Returns the user name of the current user.</returns>
         string GetUserName();
-
-        /// <summary>
-        /// Gets the maximum length for user names.
-        /// </summary>
-        int MaxLengthForUserName { get; }
     }
 
     /// <summary>
@@ -65,10 +60,5 @@ namespace IntelligentData.Interfaces
         /// </summary>
         /// <returns>Returns the user ID or null.</returns>
         string GetUserID();
-
-        /// <summary>
-        /// Gets the maximum length for user IDs.
-        /// </summary>
-        int MaxLengthForUserID { get; }
     }
 }

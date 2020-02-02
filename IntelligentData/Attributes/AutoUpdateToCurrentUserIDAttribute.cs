@@ -64,7 +64,7 @@ namespace IntelligentData.Attributes
         /// <inheritdoc />
         public object NewValue(object entity, object currentValue, DbContext context)
         {
-            var provider = (context as IntelligentDbContext)?.CurrentUserProvider ?? new Nobody();
+            var provider = (context as IntelligentDbContext)?.CurrentUserProvider ?? Nobody.Instance;
             return _getUserId(provider);
         }
     }

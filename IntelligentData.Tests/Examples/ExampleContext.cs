@@ -48,6 +48,7 @@ namespace IntelligentData.Tests.Examples
         public DbSet<DynamicAccessEntity>          DynamicAccessEntities          { get; set; }
         public DbSet<StringFormatExample>          StringFormatExamples           { get; set; }
         public DbSet<AutoDateExample>              AutoDateExamples               { get; set; }
+        public DbSet<TrackedEntity>                TrackedEntities                { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -56,7 +57,7 @@ namespace IntelligentData.Tests.Examples
             modelBuilder
                 .Entity<AutoDateExample>()
                 .Property(x => x.SaveCount)
-                .HasAutoUpdate(v => (int)v + 1);
+                .HasAutoUpdate(v => (int) v + 1);
         }
 
 

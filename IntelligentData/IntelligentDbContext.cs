@@ -34,7 +34,7 @@ namespace IntelligentData
         protected IntelligentDbContext(DbContextOptions options, IUserInformationProvider currentUserProvider)
             : base(options)
         {
-            CurrentUserProvider = currentUserProvider ?? new Nobody();
+            CurrentUserProvider = currentUserProvider ?? Nobody.Instance;
         }
 
         #region Access Control
@@ -326,11 +326,9 @@ namespace IntelligentData
                     if (typeof(ITrackedEntityWithUserName).IsAssignableFrom(et))
                     {
                         xt.Property(nameof(ITrackedEntityWithUserName.CreatedBy))
-                          .HasRuntimeDefault<RuntimeDefaultCurrentUserNameAttribute>()
-                          .HasMaxLength(CurrentUserProvider.MaxLengthForUserName);
+                          .HasRuntimeDefault<RuntimeDefaultCurrentUserNameAttribute>();
                         xt.Property(nameof(ITrackedEntityWithUserName.LastModifiedBy))
-                          .HasAutoUpdate<AutoUpdateToCurrentUserNameAttribute>()
-                          .HasMaxLength(CurrentUserProvider.MaxLengthForUserName);
+                          .HasAutoUpdate<AutoUpdateToCurrentUserNameAttribute>();
                     }
 
                     if (typeof(ITrackedEntityWithInt32UserID).IsAssignableFrom(et))
@@ -360,11 +358,9 @@ namespace IntelligentData
                     if (typeof(ITrackedEntityWithStringUserID).IsAssignableFrom(et))
                     {
                         xt.Property(nameof(ITrackedEntityWithStringUserID.CreatedByID))
-                          .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute(typeof(string)))
-                          .HasMaxLength((CurrentUserProvider as IUserInformationProviderString)?.MaxLengthForUserID ?? CurrentUserProvider.MaxLengthForUserName);
+                          .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute(typeof(string)));
                         xt.Property(nameof(ITrackedEntityWithStringUserID.LastModifiedByID))
-                          .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute(typeof(string)))
-                          .HasMaxLength((CurrentUserProvider as IUserInformationProviderString)?.MaxLengthForUserID ?? CurrentUserProvider.MaxLengthForUserName);
+                          .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute(typeof(string)));
                     }
                 }
 
