@@ -318,49 +318,53 @@ namespace IntelligentData
 
                 if (typeof(ITrackedEntity).IsAssignableFrom(et))
                 {
-                    entityType.FindProperty(nameof(ITrackedEntity.CreatedAt))
-                              .HasRuntimeDefault<RuntimeDefaultNowAttribute>();
-                    entityType.FindProperty(nameof(ITrackedEntity.LastModifiedAt))
-                              .HasAutoUpdate<AutoUpdateToNowAttribute>();
+                    xt.Property(nameof(ITrackedEntity.CreatedAt))
+                      .HasRuntimeDefault<RuntimeDefaultNowAttribute>();
+                    xt.Property(nameof(ITrackedEntity.LastModifiedAt))
+                      .HasAutoUpdate<AutoUpdateToNowAttribute>();
 
                     if (typeof(ITrackedEntityWithUserName).IsAssignableFrom(et))
                     {
-                        entityType.FindProperty(nameof(ITrackedEntityWithUserName.CreatedBy))
-                                  .HasRuntimeDefault<RuntimeDefaultCurrentUserNameAttribute>();
-                        entityType.FindProperty(nameof(ITrackedEntityWithUserName.LastModifiedBy))
-                                  .HasAutoUpdate<AutoUpdateToCurrentUserNameAttribute>();
+                        xt.Property(nameof(ITrackedEntityWithUserName.CreatedBy))
+                          .HasRuntimeDefault<RuntimeDefaultCurrentUserNameAttribute>()
+                          .HasMaxLength(CurrentUserProvider.MaxLengthForUserName);
+                        xt.Property(nameof(ITrackedEntityWithUserName.LastModifiedBy))
+                          .HasAutoUpdate<AutoUpdateToCurrentUserNameAttribute>()
+                          .HasMaxLength(CurrentUserProvider.MaxLengthForUserName);
                     }
 
                     if (typeof(ITrackedEntityWithInt32UserID).IsAssignableFrom(et))
                     {
-                        entityType.FindProperty(nameof(ITrackedEntityWithInt32UserID.CreatedByID))
-                                  .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute() {UserIdType = typeof(int)});
-                        entityType.FindProperty(nameof(ITrackedEntityWithInt32UserID.LastModifiedByID))
-                                  .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute() {UserIdType = typeof(int)});
+                        xt.Property(nameof(ITrackedEntityWithInt32UserID.CreatedByID))
+                          .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute(typeof(int)));
+                        xt.Property(nameof(ITrackedEntityWithInt32UserID.LastModifiedByID))
+                          .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute(typeof(int)));
                     }
 
                     if (typeof(ITrackedEntityWithInt64UserID).IsAssignableFrom(et))
                     {
-                        entityType.FindProperty(nameof(ITrackedEntityWithInt64UserID.CreatedByID))
-                                  .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute() {UserIdType = typeof(long)});
-                        entityType.FindProperty(nameof(ITrackedEntityWithInt64UserID.LastModifiedByID))
-                                  .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute() {UserIdType = typeof(long)});
+                        xt.Property(nameof(ITrackedEntityWithInt64UserID.CreatedByID))
+                          .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute(typeof(long)));
+                        xt.Property(nameof(ITrackedEntityWithInt64UserID.LastModifiedByID))
+                          .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute(typeof(long)));
                     }
 
                     if (typeof(ITrackedEntityWithGuidUserID).IsAssignableFrom(et))
                     {
-                        entityType.FindProperty(nameof(ITrackedEntityWithGuidUserID.CreatedByID))
-                                  .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute() {UserIdType = typeof(Guid)});
-                        entityType.FindProperty(nameof(ITrackedEntityWithGuidUserID.LastModifiedByID))
-                                  .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute() {UserIdType = typeof(Guid)});
+                        xt.Property(nameof(ITrackedEntityWithGuidUserID.CreatedByID))
+                          .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute(typeof(Guid)));
+                        xt.Property(nameof(ITrackedEntityWithGuidUserID.LastModifiedByID))
+                          .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute(typeof(Guid)));
                     }
 
                     if (typeof(ITrackedEntityWithStringUserID).IsAssignableFrom(et))
                     {
-                        entityType.FindProperty(nameof(ITrackedEntityWithStringUserID.CreatedByID))
-                                  .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute() {UserIdType = typeof(string)});
-                        entityType.FindProperty(nameof(ITrackedEntityWithStringUserID.LastModifiedByID))
-                                  .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute() {UserIdType = typeof(string)});
+                        xt.Property(nameof(ITrackedEntityWithStringUserID.CreatedByID))
+                          .HasRuntimeDefault(new RuntimeDefaultCurrentUserIDAttribute(typeof(string)))
+                          .HasMaxLength((CurrentUserProvider as IUserInformationProviderString)?.MaxLengthForUserID ?? CurrentUserProvider.MaxLengthForUserName);
+                        xt.Property(nameof(ITrackedEntityWithStringUserID.LastModifiedByID))
+                          .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute(typeof(string)))
+                          .HasMaxLength((CurrentUserProvider as IUserInformationProviderString)?.MaxLengthForUserID ?? CurrentUserProvider.MaxLengthForUserName);
                     }
                 }
 
