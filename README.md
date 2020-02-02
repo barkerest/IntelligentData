@@ -13,6 +13,9 @@ This is an extension library for EntityFramework that adds some intelligence to 
   Provide default values for properties based on runtime execution (eg - current date/time).
 * __Auto-update Properties__  
   Generates a new value for a property automatically when an entity is saved (eg - current date/time).
+* __Tracking Interfaces__  
+  Building on the auto-update and runtime defaults, there are ITrackedEntity interfaces available
+  that automatically setup specific properties to track date/time and user information.
 
 ## Usage
 
@@ -42,10 +45,24 @@ public class MyEntity
     public DateTime LastModified { get; set; }
 
     public int SaveCount { get; set; }
+
+    [RuntimeDefaultCurrentUserName]
+    public string CreatedBy { get; set; }
+
+    [AutoUpdateToCurrentUserName]
+    public string LastModifiedBy { get; set; }
 }
 
 public class MyDbContext : IntelligentDbContext
 {
+    public MyDbContext(
+        DbContextOptions<MyDbContext> options,              // options to build the DbContext
+        IUserInformationProvider userInformationProvider    // user information provider for user tracking
+    )
+        : base(options, userInformationProvider)
+    {
+    }
+
     public DbSet<MyEntity> MyEntities { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
