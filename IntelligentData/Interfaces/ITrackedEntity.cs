@@ -11,7 +11,7 @@ namespace IntelligentData.Interfaces
         /// The date/time the entity was created.
         /// </summary>
         DateTime CreatedAt { get; set; }
-        
+
         /// <summary>
         /// The date/time the entity was last modified.
         /// </summary>
@@ -27,7 +27,7 @@ namespace IntelligentData.Interfaces
         /// The name of the user who created the entity.
         /// </summary>
         string CreatedBy { get; set; }
-        
+
         /// <summary>
         /// The name of the user who last modified the entity.
         /// </summary>
@@ -43,13 +43,13 @@ namespace IntelligentData.Interfaces
         /// The ID of the user who created the entity.
         /// </summary>
         int CreatedByID { get; set; }
-        
+
         /// <summary>
         /// The ID of the user who last modified the entity.
         /// </summary>
         int LastModifiedByID { get; set; }
     }
-    
+
     /// <summary>
     /// A common entity with created/modified date/time and user tracking.
     /// </summary>
@@ -59,13 +59,13 @@ namespace IntelligentData.Interfaces
         /// The ID of the user who created the entity.
         /// </summary>
         long CreatedByID { get; set; }
-        
+
         /// <summary>
         /// The ID of the user who last modified the entity.
         /// </summary>
         long LastModifiedByID { get; set; }
     }
-    
+
     /// <summary>
     /// A common entity with created/modified date/time and user tracking.
     /// </summary>
@@ -75,13 +75,13 @@ namespace IntelligentData.Interfaces
         /// The ID of the user who created the entity.
         /// </summary>
         Guid CreatedByID { get; set; }
-        
+
         /// <summary>
         /// The ID of the user who last modified the entity.
         /// </summary>
         Guid LastModifiedByID { get; set; }
     }
-    
+
     /// <summary>
     /// A common entity with created/modified date/time and user tracking.
     /// </summary>
@@ -91,7 +91,7 @@ namespace IntelligentData.Interfaces
         /// The ID of the user who created the entity.
         /// </summary>
         string CreatedByID { get; set; }
-        
+
         /// <summary>
         /// The ID of the user who last modified the entity.
         /// </summary>

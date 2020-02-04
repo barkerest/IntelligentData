@@ -16,6 +16,10 @@ This is an extension library for EntityFramework that adds some intelligence to 
 * __Tracking Interfaces__  
   Building on the auto-update and runtime defaults, there are ITrackedEntity interfaces available
   that automatically setup specific properties to track date/time and user information.
+* __Concurrent Versioned Interfaces__  
+  Define entities with 64-bit version tracking properties just by implementing the interface.
+  The context takes care of updating the property on save and tracking the original value for
+  concurrency checking.
 
 ## Usage
 
@@ -27,7 +31,7 @@ dotnet add package IntelligentData
 
 // Allow entities to be created and updated, but not deleted.
 [Access(AccessLevel.Insert | AccessLevel.Update)]
-public class MyEntity
+public class MyEntity : IVersionedEntity
 {
     [Key]
     public int ID { get; set; }
@@ -51,6 +55,9 @@ public class MyEntity
 
     [AutoUpdateToCurrentUserName]
     public string LastModifiedBy { get; set; }
+
+    // handled by the context, we never need to look at this value in our code.
+    public long? RowVersion { get; set; }
 }
 
 public class MyDbContext : IntelligentDbContext

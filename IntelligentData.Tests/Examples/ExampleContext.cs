@@ -49,6 +49,8 @@ namespace IntelligentData.Tests.Examples
         public DbSet<StringFormatExample>          StringFormatExamples           { get; set; }
         public DbSet<AutoDateExample>              AutoDateExamples               { get; set; }
         public DbSet<TrackedEntity>                TrackedEntities                { get; set; }
+        public DbSet<VersionedEntity>              VersionedEntities              { get; set; }
+        public DbSet<TimestampedEntity>            TimestampedEntities            { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

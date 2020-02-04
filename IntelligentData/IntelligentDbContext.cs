@@ -215,6 +215,26 @@ namespace IntelligentData
 
         #endregion
 
+        #region Handle Versioned Models
+
+        private void HandleVersionedModels(IEnumerable<EntityEntry> entries)
+        {
+            foreach (var entry in entries.Where(e => e.Entity is IVersionedEntity))
+            {
+                var entity = (IVersionedEntity) entry.Entity;
+                var prop = entry.Property(nameof(IVersionedEntity.RowVersion));
+                
+                var ver = entity.RowVersion;
+                prop.IsModified = true;
+                prop.OriginalValue = ver;
+                entity.RowVersion = (entity is ITimestampedEntity)
+                                        ? DateTime.Now.Ticks
+                                        : (ver.GetValueOrDefault() + 1);
+            }
+        }
+        
+        #endregion
+        
         #region Save Changes
 
         private TResult ProcessEntitiesAndThen<TResult>(Func<TResult> save)
@@ -241,11 +261,10 @@ namespace IntelligentData
                 // no further action needed for deleted entries.
                 records.RemoveAll(x => x.State == EntityState.Deleted);
 
-                // TODO: Additional processing of inserted and updated records.
-
                 HonorRuntimeDefaultProperties(records);
                 HonorAutoUpdateProperties(records);
                 HonorStringFormatProperties(records);
+                HandleVersionedModels(records);
 
                 // finally perform the save.
                 return save();
@@ -316,6 +335,11 @@ namespace IntelligentData
                     // TODO: Process additional attributes?
                 }
 
+                if (typeof(IVersionedEntity).IsAssignableFrom(et))
+                {
+                    xt.Property(nameof(IVersionedEntity.RowVersion)).IsConcurrencyToken();
+                }
+                
                 if (typeof(ITrackedEntity).IsAssignableFrom(et))
                 {
                     xt.Property(nameof(ITrackedEntity.CreatedAt))
