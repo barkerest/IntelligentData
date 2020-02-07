@@ -39,6 +39,11 @@ namespace IntelligentData
 
         #region Access Control
 
+        /// <summary>
+        /// Defines the default access level for entities when no attribute or interface method is available.
+        /// </summary>
+        public virtual AccessLevel DefaultAccessLevel { get; } = AccessLevel.ReadOnly;
+
         private readonly Dictionary<Type, AccessLevel> _defaultAccessLevels = new Dictionary<Type, AccessLevel>();
         private          bool                          _allowSeedData       = false;
 
@@ -48,13 +53,24 @@ namespace IntelligentData
             {
                 if (_defaultAccessLevels.ContainsKey(entityType)) return _defaultAccessLevels[entityType];
 
+                // the true default is readonly. 
                 var level = AccessLevel.ReadOnly;
+                var attribs = entityType.GetCustomAttributes()
+                                        .OfType<IEntityAccessProvider>()
+                                        .ToArray();
 
-                // default access comes from attributes and is always the most permissive set from the attributes.
-                foreach (var attr in entityType.GetCustomAttributes()
-                                               .OfType<IEntityAccessProvider>())
+                if (attribs.Any())
                 {
-                    level |= attr.EntityAccessLevel;
+                    // when we have attributes present, they build upon the readonly default.
+                    foreach (var attr in attribs)
+                    {
+                        level |= attr.EntityAccessLevel;
+                    }
+                }
+                else
+                {
+                    // if there are no attributes, use the value from the context.
+                    level = DefaultAccessLevel;
                 }
 
                 _defaultAccessLevels[entityType] = level;

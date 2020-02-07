@@ -1,4 +1,5 @@
-﻿using IntelligentData.Extensions;
+﻿using IntelligentData.Enums;
+using IntelligentData.Extensions;
 using IntelligentData.Interfaces;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -51,6 +52,7 @@ namespace IntelligentData.Tests.Examples
         public DbSet<TrackedEntity>                TrackedEntities                { get; set; }
         public DbSet<VersionedEntity>              VersionedEntities              { get; set; }
         public DbSet<TimestampedEntity>            TimestampedEntities            { get; set; }
+        public DbSet<DefaultAccessEntity>          DefaultAccessEntities          { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -60,6 +62,14 @@ namespace IntelligentData.Tests.Examples
                 .Entity<AutoDateExample>()
                 .Property(x => x.SaveCount)
                 .HasAutoUpdate(v => (int) v + 1);
+        }
+
+        private            AccessLevel _defaultAccessLevel = AccessLevel.ReadOnly;
+        public override AccessLevel DefaultAccessLevel => _defaultAccessLevel;
+
+        public void SetDefaultAccessLevel(AccessLevel level)
+        {
+            _defaultAccessLevel = level;
         }
 
 
