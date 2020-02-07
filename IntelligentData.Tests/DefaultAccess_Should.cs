@@ -31,5 +31,27 @@ namespace IntelligentData.Tests
             Assert.Equal(level, _db.AccessForEntity(new DefaultAccessEntity()));
         }
 
+        [Theory]
+        [InlineData(AccessLevel.ReadOnly)]
+        [InlineData(AccessLevel.FullAccess)]
+        [InlineData(AccessLevel.Insert | AccessLevel.Update)]
+        [InlineData(AccessLevel.Insert | AccessLevel.Delete)]
+        public void NotInterfereWithExplicitAccess(AccessLevel level)
+        {
+            _db.SetDefaultAccessLevel(level);
+            
+            Assert.Equal(level, _db.DefaultAccessLevel);
+
+            _output.WriteLine($"Default is {level}.");
+            
+            foreach (var (expected,type) in EntityAccess_Should.ExpectedEntityAccessLevels)
+            {
+                var entity = Activator.CreateInstance(type);
+                var actual = _db.AccessForEntity(entity);
+                _output.WriteLine($"Type {type}; expected: {expected}; actual: {actual}");
+                Assert.Equal(expected, actual);
+            }
+        }
+        
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using IntelligentData.Enums;
 using IntelligentData.Tests.Examples;
@@ -38,15 +39,23 @@ namespace IntelligentData.Tests
             );
         }
 
+        public static readonly IReadOnlyList<(AccessLevel, Type)> ExpectedEntityAccessLevels = new[]
+        {
+            (AccessLevel.ReadOnly, typeof(ReadOnlyEntity)),
+            (AccessLevel.Insert, typeof(ReadInsertEntity)),
+            (AccessLevel.Update, typeof(ReadUpdateEntity)),
+            (AccessLevel.Delete, typeof(ReadDeleteEntity)),
+            (AccessLevel.Insert | AccessLevel.Update, typeof(ReadInsertUpdateEntity)),
+            (AccessLevel.Insert | AccessLevel.Delete, typeof(ReadInsertDeleteEntity)),
+            (AccessLevel.Update | AccessLevel.Delete, typeof(ReadUpdateDeleteEntity)),
+            (AccessLevel.FullAccess, typeof(ReadInsertUpdateDeleteEntity)),
+        };
+
+        public static IEnumerable<object[]> BeAppropriateForEntityParams()
+            => ExpectedEntityAccessLevels.Select(x => new object[] {x.Item1, x.Item2});
+        
         [Theory]
-        [InlineData(AccessLevel.ReadOnly, typeof(ReadOnlyEntity))]
-        [InlineData(AccessLevel.Insert, typeof(ReadInsertEntity))]
-        [InlineData(AccessLevel.Update, typeof(ReadUpdateEntity))]
-        [InlineData(AccessLevel.Delete, typeof(ReadDeleteEntity))]
-        [InlineData(AccessLevel.Insert | AccessLevel.Update, typeof(ReadInsertUpdateEntity))]
-        [InlineData(AccessLevel.Insert | AccessLevel.Delete, typeof(ReadInsertDeleteEntity))]
-        [InlineData(AccessLevel.Update | AccessLevel.Delete, typeof(ReadUpdateDeleteEntity))]
-        [InlineData(AccessLevel.FullAccess, typeof(ReadInsertUpdateDeleteEntity))]
+        [MemberData(nameof(BeAppropriateForEntityParams))]
         public void BeAppropriateForEntity(AccessLevel level, Type entityType)
         {
             var entity = Activator.CreateInstance(entityType);
