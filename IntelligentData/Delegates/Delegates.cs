@@ -17,4 +17,11 @@ namespace IntelligentData.Delegates
     /// <param name="currentValue">The current value from the entity.</param>
     /// <param name="context">The context the entity is being saved to.</param>
     public delegate string StringFormatProviderDelegate(object entity, string currentValue, DbContext context);
+
+    /// <summary>
+    /// An entity initializer.
+    /// </summary>
+    /// <param name="context">The context initializing the entity.</param>
+    /// <param name="entity">The entity being initialized.</param>
+    public delegate void IntelligentEntityInitializer(IntelligentDbContext context, object entity);
 }

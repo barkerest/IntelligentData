@@ -4,6 +4,8 @@ using IntelligentData.Interfaces;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Logging;
+using Xunit.Abstractions;
 
 namespace IntelligentData.Tests.Examples
 {
@@ -32,8 +34,8 @@ namespace IntelligentData.Tests.Examples
 
         public static readonly string NewName = "Tasmanian Devil";
 
-        public ExampleContext(DbContextOptions options, IUserInformationProvider currentUserProvider)
-            : base(options, currentUserProvider)
+        public ExampleContext(DbContextOptions options, IUserInformationProvider currentUserProvider, ILogger logger)
+            : base(options, currentUserProvider, logger)
         {
         }
 
@@ -102,30 +104,30 @@ namespace IntelligentData.Tests.Examples
             return builder.Options;
         }
 
-        public static ExampleContext CreateContext(bool seed = false, IUserInformationProvider currentUserProvider = null)
+        public static ExampleContext CreateContext(bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null)
         {
             var options = CreateOptions();
-            using (var context = new ExampleContext(options, currentUserProvider))
+            using (var context = new ExampleContext(options, currentUserProvider, new ExampleLogger()))
             {
                 context.Database.EnsureCreated();
             }
 
-            var ret = new ExampleContext(options, currentUserProvider);
+            var ret = new ExampleContext(options, currentUserProvider, new ExampleLogger(outputHelper));
             if (seed) ret.Seed();
             return ret;
         }
 
-        public static ExampleContext CreateContext(out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider currentUserProvider = null)
+        public static ExampleContext CreateContext(out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null)
         {
             var options = CreateOptions();
-            using (var context = new ExampleContext(options, currentUserProvider))
+            using (var context = new ExampleContext(options, currentUserProvider, new ExampleLogger()))
             {
                 context.Database.EnsureCreated();
             }
 
-            var ret = new ExampleContext(options, currentUserProvider);
+            var ret = new ExampleContext(options, currentUserProvider, new ExampleLogger(outputHelper));
             if (seed) ret.Seed();
-            secondaryContext = new ExampleContext(options, currentUserProvider);
+            secondaryContext = new ExampleContext(options, currentUserProvider, new ExampleLogger(outputHelper));
             return ret;
         }
 

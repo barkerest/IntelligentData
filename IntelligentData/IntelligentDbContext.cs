@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using IntelligentData.Attributes;
+using IntelligentData.Delegates;
 using IntelligentData.Enums;
 using IntelligentData.Extensions;
 using IntelligentData.Interfaces;
@@ -13,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.Logging;
 
 namespace IntelligentData
 {
@@ -26,17 +28,35 @@ namespace IntelligentData
         /// </summary>
         public IUserInformationProvider CurrentUserProvider { get; }
 
+        
         /// <summary>
         /// Constructs the intelligent DB context.
         /// </summary>
         /// <param name="options">The options to construct the DB context with.</param>
         /// <param name="currentUserProvider">The current user provider.</param>
-        protected IntelligentDbContext(DbContextOptions options, IUserInformationProvider currentUserProvider)
+        protected IntelligentDbContext(DbContextOptions options, IUserInformationProvider currentUserProvider, ILogger logger)
             : base(options)
         {
             CurrentUserProvider = currentUserProvider ?? Nobody.Instance;
+            Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
+        #region Logging
+        
+        /// <summary>
+        /// The logger attached to this context.
+        /// </summary>
+        public ILogger Logger { get; }
+
+
+        /// <summary>
+        /// Determines if a warning should be issued when an intelligent entity detects lazy loading.
+        /// </summary>
+        public bool WarnOnLazyLoading { get; set; } = true;
+        
+        
+        #endregion
+        
         #region Access Control
 
         /// <summary>
@@ -408,6 +428,112 @@ namespace IntelligentData
             }
         }
 
+        #endregion
+        
+        #region Intelligent Entity Initialization
+
+        private static readonly IDictionary<Type, List<IntelligentEntityInitializer>> EntityInitializers = new Dictionary<Type, List<IntelligentEntityInitializer>>();
+
+        /// <summary>
+        /// Adds an entity initializer to the context type.
+        /// </summary>
+        /// <param name="initializer">The initializer to add.</param>
+        /// <typeparam name="TContext">The context type to add the initializer to.</typeparam>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static void AddEntityInitializer<TContext>(IntelligentEntityInitializer initializer)
+            where TContext : IntelligentDbContext
+        {
+            if (initializer is null) throw new ArgumentNullException(nameof(initializer));
+            var t = typeof(TContext);
+            lock (EntityInitializers)
+            {
+                if (!EntityInitializers.ContainsKey(t))
+                {
+                    EntityInitializers[t] = new List<IntelligentEntityInitializer>();
+                }
+                EntityInitializers[t].Add(initializer);
+            }
+        }
+
+        /// <summary>
+        /// Adds an entity initializer to this context.
+        /// </summary>
+        /// <param name="initializer">The initializer to add.</param>
+        /// <exception cref="ArgumentNullException"></exception>
+        protected void AddEntityInitializer(IntelligentEntityInitializer initializer)
+        {
+            if (initializer is null) throw new ArgumentNullException(nameof(initializer));
+            var t = GetType();
+            lock (EntityInitializers)
+            {
+                if (!EntityInitializers.ContainsKey(t))
+                {
+                    EntityInitializers[t] = new List<IntelligentEntityInitializer>();
+                }
+                EntityInitializers[t].Add(initializer);
+            }
+        }
+
+        /// <summary>
+        /// Clears all initializers from the specified context.
+        /// </summary>
+        /// <typeparam name="TContext">The context to remove initializers from.</typeparam>
+        public static void ClearEntityInitializers<TContext>()
+            where TContext : IntelligentDbContext
+        {
+            var t = typeof(TContext);
+            lock (EntityInitializers)
+            {
+                if (EntityInitializers.ContainsKey(t))
+                {
+                    EntityInitializers.Remove(t);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Clears all initializers from this context.
+        /// </summary>
+        protected void ClearEntityInitializers()
+        {
+            var t = GetType();
+            lock (EntityInitializers)
+            {
+                if (EntityInitializers.ContainsKey(t))
+                {
+                    EntityInitializers.Remove(t);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Applies the initializers from this context against the entity.
+        /// </summary>
+        /// <param name="entity">The entity to initialize.</param>
+        /// <remarks>
+        /// The IntelligentEntity base class will apply this automatically when a new entity is created.
+        /// </remarks>
+        public void InitializeEntity(object entity)
+        {
+            if (entity is null) return;
+            var t = GetType();
+            IReadOnlyList<IntelligentEntityInitializer> initializers = null;
+            lock (EntityInitializers)
+            {
+                if (EntityInitializers.ContainsKey(t))
+                {
+                    initializers = EntityInitializers[t].ToArray();
+                }
+            }
+
+            if (initializers is null || initializers.Count == 0) return;
+
+            foreach (var init in initializers)
+            {
+                init(this, entity);
+            }
+        }
+        
         #endregion
     }
 }
