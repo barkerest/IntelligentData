@@ -16,7 +16,7 @@ namespace IntelligentData
         private readonly TContext _context;
         
         /// <summary>
-        /// Gets the linked DB context for this model.
+        /// Gets the linked DB context for this entity.
         /// </summary>
         /// <remarks>
         /// This will log a warning for lazy loading.
