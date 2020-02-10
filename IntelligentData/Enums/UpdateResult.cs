@@ -11,6 +11,11 @@
         Success,
         
         /// <summary>
+        /// The update failed because the entity failed validation.
+        /// </summary>
+        FailedValidation,
+        
+        /// <summary>
         /// The update failed because inserting is disabled for the entity in the DB context.
         /// </summary>
         FailedInsertDisallowed,

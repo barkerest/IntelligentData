@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using IntelligentData.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging;
 
 namespace IntelligentData
@@ -42,6 +45,42 @@ namespace IntelligentData
             _context.InitializeEntity(this);
         }
 
+        /// <summary>
+        /// Gets the validation errors for this entity.
+        /// </summary>
+        /// <returns>Returns the validation errors (if any) for this entity.</returns>
+        public IEnumerable<ValidationResult> GetValidationErrors()
+        {
+            var ctx = new ValidationContext(this, _context.GetInfrastructure(), null);
+            var results = new List<ValidationResult>();
+            Validator.TryValidateObject(this, ctx, results);
+            return results;
+        }
+        
+        /// <summary>
+        /// Validates this entity.
+        /// </summary>
+        /// <param name="validationResults">The results of the validation.</param>
+        /// <returns>Returns true if the entity passes validation.</returns>
+        public bool IsValidForDatabase(out IEnumerable<ValidationResult> validationResults)
+        {
+            var ctx = new ValidationContext(this, _context.GetInfrastructure(), null);
+            var results = new List<ValidationResult>();
+            var ret = Validator.TryValidateObject(this, ctx, results);
+            validationResults = results;
+            return ret;
+        }
+
+        /// <summary>
+        /// Validates this entity.
+        /// </summary>
+        /// <returns>Returns true if the entity passes validation.</returns>
+        public bool IsValidForDatabase()
+        {
+            var ctx = new ValidationContext(this, _context.GetInfrastructure(), null);
+            return Validator.TryValidateObject(this, ctx, null);
+        }
+        
         /// <summary>
         /// Determines if this entity exists in the DB context.
         /// </summary>
@@ -133,6 +172,9 @@ namespace IntelligentData
         /// <returns></returns>
         public UpdateResult SaveToDatabase()
         {
+            if (!IsValidForDatabase())
+                return UpdateResult.FailedValidation;
+            
             var state = _context.Entry(this).State;
 
             if (state == EntityState.Deleted ||
