@@ -11,6 +11,21 @@
         Success,
         
         /// <summary>
+        /// The update failed because inserting is disabled for the entity in the DB context.
+        /// </summary>
+        FailedInsertDisallowed,
+        
+        /// <summary>
+        /// The update failed because updating is disabled for the entity in the DB context.
+        /// </summary>
+        FailedUpdateDisallowed,
+        
+        /// <summary>
+        /// The update failed because deleting is disable for the entity in the DB context.
+        /// </summary>
+        FailedDeleteDisallowed,
+        
+        /// <summary>
         /// The update failed because the entity was deleted by another thread.
         /// </summary>
         FailedDeletedByOther,

@@ -120,6 +120,9 @@ namespace IntelligentData
         /// <returns></returns>
         public UpdateResult DeleteFromDatabase()
         {
+            if ((_context.AccessForEntity(this) & AccessLevel.Delete) != AccessLevel.Delete)
+                return UpdateResult.FailedDeleteDisallowed;
+            
             _context.Entry(this).State = EntityState.Deleted;
             return DoSaveChanges();
         }
@@ -135,6 +138,9 @@ namespace IntelligentData
             if (state == EntityState.Deleted ||
                 state == EntityState.Unchanged)
             {
+                if ((_context.AccessForEntity(this) & AccessLevel.Update) != AccessLevel.Update)
+                    return UpdateResult.FailedUpdateDisallowed;
+                
                 // unchanged and deleted get converted to modified.
                 _context.Entry(this).State = EntityState.Modified;
             }
@@ -144,10 +150,16 @@ namespace IntelligentData
             {
                 if (ExistsInDatabase())
                 {
+                    if ((_context.AccessForEntity(this) & AccessLevel.Update) != AccessLevel.Update)
+                        return UpdateResult.FailedUpdateDisallowed;
+                    
                     _context.Update(this);
                 }
                 else
                 {
+                    if ((_context.AccessForEntity(this) & AccessLevel.Update) != AccessLevel.Update)
+                        return UpdateResult.FailedInsertDisallowed;
+
                     _context.Add(this);
                 }
             }
