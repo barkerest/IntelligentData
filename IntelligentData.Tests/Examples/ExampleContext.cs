@@ -55,6 +55,7 @@ namespace IntelligentData.Tests.Examples
         public DbSet<VersionedEntity>              VersionedEntities              { get; set; }
         public DbSet<TimestampedEntity>            TimestampedEntities            { get; set; }
         public DbSet<DefaultAccessEntity>          DefaultAccessEntities          { get; set; }
+        public DbSet<SmartEntity>                  SmartEntities                  { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -66,7 +67,7 @@ namespace IntelligentData.Tests.Examples
                 .HasAutoUpdate(v => (int) v + 1);
         }
 
-        private            AccessLevel _defaultAccessLevel = AccessLevel.ReadOnly;
+        private         AccessLevel _defaultAccessLevel = AccessLevel.ReadOnly;
         public override AccessLevel DefaultAccessLevel => _defaultAccessLevel;
 
         public void SetDefaultAccessLevel(AccessLevel level)
