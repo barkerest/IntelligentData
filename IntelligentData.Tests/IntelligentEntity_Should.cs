@@ -117,5 +117,116 @@ namespace IntelligentData.Tests
                 );
             }
         }
+
+        [Fact]
+        public void FailsForValidationError()
+        {
+            var item = new SmartEntity(_db)
+            {
+                Name = "George"
+            };
+            
+            Assert.Equal(UpdateResult.FailedValidation, item.SaveToDatabase());
+
+            item.Name = "Bob";
+            Assert.Equal(UpdateResult.Success, item.SaveToDatabase());
+        }
+
+        [Fact]
+        public void FailsForInsertDisallowed()
+        {
+            var item = new SmartEntity(_db)
+            {
+                Name = "Bob"
+            };
+            
+            item.SetAccessLevel(AccessLevel.ReadOnly);
+            
+            Assert.Equal(UpdateResult.FailedInsertDisallowed, item.SaveToDatabase());
+            
+            item.SetAccessLevel(AccessLevel.FullAccess);
+            Assert.Equal(UpdateResult.Success, item.SaveToDatabase());
+        }
+
+        [Fact]
+        public void FailsForUpdateDisallowed()
+        {
+            var item = new SmartEntity(_db)
+            {
+                Name = "Bob"
+            };
+
+            item.SetAccessLevel(AccessLevel.Insert);
+            
+            _db.Add(item);
+            Assert.Equal(1, _db.SaveChanges());
+
+            item.Name = "Roy";
+            Assert.Equal(UpdateResult.FailedUpdateDisallowed, item.SaveToDatabase());
+            
+            item.SetAccessLevel(AccessLevel.FullAccess);
+            Assert.Equal(UpdateResult.Success, item.SaveToDatabase());
+        }
+
+        [Fact]
+        public void FailsForDeleteDisallowed()
+        {
+            var item = new SmartEntity(_db)
+            {
+                Name = "Bob"
+            };
+
+            item.SetAccessLevel(AccessLevel.Insert);
+            
+            _db.Add(item);
+            Assert.Equal(1, _db.SaveChanges());
+
+            Assert.Equal(UpdateResult.FailedDeleteDisallowed, item.DeleteFromDatabase());
+            
+            item.SetAccessLevel(AccessLevel.FullAccess);
+            Assert.Equal(UpdateResult.Success, item.DeleteFromDatabase());
+        }
+
+        [Fact]
+        public void FailsForConcurrentUpdate()
+        {
+            var item = new SmartEntity(_db)
+            {
+                Name = "Bob"
+            };
+
+            _db.Add(item);
+            Assert.Equal(1, _db.SaveChanges());
+
+            var v = item.RowVersion;
+
+            item.Name = "Roy";
+            _db.Update(item);
+            Assert.Equal(1, _db.SaveChanges());
+
+            item.RowVersion = v;
+            item.Name = "Mark";
+            
+            Assert.Equal(UpdateResult.FailedUpdatedByOther, item.SaveToDatabase());
+        }
+
+        [Fact]
+        public void FailsForConcurrentDelete()
+        {
+            var item = new SmartEntity(_db)
+            {
+                Name = "Bob"
+            };
+
+            _db.Add(item);
+            Assert.Equal(1, _db.SaveChanges());
+
+            _db.Remove(item);
+            Assert.Equal(1, _db.SaveChanges());
+
+            item.Name = "Roy";
+            Assert.Equal(UpdateResult.FailedDeletedByOther, item.SaveToDatabase());
+        }
+        
     }
 }

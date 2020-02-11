@@ -5,6 +5,8 @@ using System.Linq;
 using IntelligentData.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace IntelligentData
@@ -120,8 +122,7 @@ namespace IntelligentData
             var dbEntry = _context
                 .Find(
                     type,
-                    entityType
-                        .FindPrimaryKey()
+                    PrimaryKey
                         .Properties
                         .Select(p => p.PropertyInfo.GetValue(this))
                         .ToArray()
@@ -132,6 +133,26 @@ namespace IntelligentData
             return true;
         }
 
+        private IKey _pkey;
+        
+        /// <summary>
+        /// Gets the primary key definition for this entity.
+        /// </summary>
+        protected IKey PrimaryKey
+        {
+            get
+            {
+                if (_pkey != null) return _pkey;
+
+                _pkey = _context.Model.FindEntityType(GetType()).FindPrimaryKey() 
+                        ?? new Key(new Property[0], ConfigurationSource.Explicit);
+                
+                return _pkey;
+            }
+        }
+        
+        
+        
         private UpdateResult DoSaveChanges()
         {
             try
