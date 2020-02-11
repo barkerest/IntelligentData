@@ -94,7 +94,7 @@ namespace IntelligentData.Tests
         [InlineData(false, "", "is required")]
         [InlineData(false, "    ", "is required")]
         [InlineData(true, "100 characters......................................................................................", "")]
-        [InlineData(false, "101 characters.......................................................................................", "")]
+        [InlineData(false, "101 characters.......................................................................................", "maximum length")]
         [InlineData(false, "George", "cannot be george")]
         public void CanValidateSelf(bool ok, string name, string error)
         {

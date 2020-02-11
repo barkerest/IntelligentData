@@ -53,7 +53,7 @@ namespace IntelligentData
         {
             var ctx = new ValidationContext(this, _context.GetInfrastructure(), null);
             var results = new List<ValidationResult>();
-            Validator.TryValidateObject(this, ctx, results);
+            Validator.TryValidateObject(this, ctx, results, true);
             return results;
         }
         
@@ -66,7 +66,7 @@ namespace IntelligentData
         {
             var ctx = new ValidationContext(this, _context.GetInfrastructure(), null);
             var results = new List<ValidationResult>();
-            var ret = Validator.TryValidateObject(this, ctx, results);
+            var ret = Validator.TryValidateObject(this, ctx, results, true);
             validationResults = results;
             return ret;
         }
@@ -78,7 +78,7 @@ namespace IntelligentData
         public bool IsValidForDatabase()
         {
             var ctx = new ValidationContext(this, _context.GetInfrastructure(), null);
-            return Validator.TryValidateObject(this, ctx, null);
+            return Validator.TryValidateObject(this, ctx, null, true);
         }
         
         /// <summary>
