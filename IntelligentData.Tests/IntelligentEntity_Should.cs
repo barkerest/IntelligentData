@@ -2,6 +2,7 @@
 using System.Linq;
 using IntelligentData.Enums;
 using IntelligentData.Tests.Examples;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -161,6 +162,9 @@ namespace IntelligentData.Tests
             _db.Add(item);
             Assert.Equal(1, _db.SaveChanges());
 
+            // correctly identifying as "not new".
+            Assert.False(item.IsNewEntity());
+            
             item.Name = "Roy";
             Assert.Equal(UpdateResult.FailedUpdateDisallowed, item.SaveToDatabase());
             
@@ -188,7 +192,7 @@ namespace IntelligentData.Tests
         }
 
         [Fact]
-        public void FailsForConcurrentUpdate()
+        public void SaveFailsForConcurrentUpdate()
         {
             var item = new SmartEntity(_db)
             {
@@ -211,22 +215,60 @@ namespace IntelligentData.Tests
         }
 
         [Fact]
-        public void FailsForConcurrentDelete()
+        public void SaveFailsForConcurrentDelete()
         {
             var item = new SmartEntity(_db)
             {
                 Name = "Bob"
             };
 
-            _db.Add(item);
-            Assert.Equal(1, _db.SaveChanges());
-
+            // saves to the database, won't be a new entity afterwards.
+            Assert.Equal(UpdateResult.Success, item.SaveToDatabase());
+            
+            // removed in another thread.
             _db.Remove(item);
             Assert.Equal(1, _db.SaveChanges());
 
             item.Name = "Roy";
             Assert.Equal(UpdateResult.FailedDeletedByOther, item.SaveToDatabase());
         }
-        
+
+        [Fact]
+        public void DeleteFailsForConcurrentUpdate()
+        {
+            var item = new SmartEntity(_db)
+            {
+                Name = "Bob"
+            };
+
+            Assert.Equal(UpdateResult.Success, item.SaveToDatabase());
+
+            var v = item.RowVersion;
+            item.Name = "Roy";
+            Assert.Equal(UpdateResult.Success, item.SaveToDatabase());
+            
+
+            item.RowVersion = v;
+            item.Name = "Jon";
+            Assert.Equal(UpdateResult.FailedUpdatedByOther, item.DeleteFromDatabase());
+        }
+
+        [Fact]
+        public void DeleteSucceedsForConcurrentDelete()
+        {
+            var item = new SmartEntity(_db)
+            {
+                Name = "Bob"
+            };
+            
+            Assert.Equal(UpdateResult.Success, item.SaveToDatabase());
+
+            // removed in another thread.
+            _db.Remove(item);
+            Assert.Equal(1, _db.SaveChanges());
+
+            // the entity is still gone, even if deleted in another thread.
+            Assert.Equal(UpdateResult.SuccessNoChanges, item.DeleteFromDatabase());
+        }
     }
 }

@@ -11,6 +11,11 @@
         Success,
         
         /// <summary>
+        /// The update was successful, but no changes were made to the database.
+        /// </summary>
+        SuccessNoChanges,
+        
+        /// <summary>
         /// The update failed because the entity failed validation.
         /// </summary>
         FailedValidation,
@@ -44,5 +49,17 @@
         /// The update failed for an unknown reason.
         /// </summary>
         FailedUnknownReason
+    }
+
+    public static class UpdateResultExtension
+    {
+        /// <summary>
+        /// Is the result successful?
+        /// </summary>
+        /// <param name="result"></param>
+        /// <returns>Returns true if the result is successful.</returns>
+        public static bool Successful(this UpdateResult result)
+            => result == UpdateResult.Success || result == UpdateResult.SuccessNoChanges;
+        
     }
 }

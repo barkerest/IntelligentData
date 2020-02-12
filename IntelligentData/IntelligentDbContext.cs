@@ -41,6 +41,21 @@ namespace IntelligentData
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
+        #region Entity Info
+        private readonly Dictionary<Type, EntityInfo> _entityInfo = new Dictionary<Type, EntityInfo>();
+
+        internal EntityInfo GetEntityInfoFor(Type t)
+        {
+            lock (_entityInfo)
+            {
+                if (_entityInfo.ContainsKey(t)) return _entityInfo[t];
+                _entityInfo[t] = new EntityInfo(this, t);
+                return _entityInfo[t];
+            }
+        }
+        
+        #endregion
+        
         #region Logging
         
         /// <summary>
@@ -263,9 +278,12 @@ namespace IntelligentData
                 var ver = entity.RowVersion;
                 prop.IsModified = true;
                 prop.OriginalValue = ver;
-                entity.RowVersion = (entity is ITimestampedEntity)
-                                        ? DateTime.Now.Ticks
-                                        : (ver.GetValueOrDefault() + 1);
+                if (entry.State != EntityState.Deleted)
+                {
+                    entity.RowVersion = (entity is ITimestampedEntity)
+                                            ? DateTime.Now.Ticks
+                                            : (ver.GetValueOrDefault() + 1);
+                }
             }
         }
         
@@ -294,14 +312,17 @@ namespace IntelligentData
                                            .Where(IsChangePermitted)
                                            .ToList();
 
-                // no further action needed for deleted entries.
+                // handle concurrency versions first.
+                HandleVersionedModels(records);
+
+                // remove delete entries from the record list.
                 records.RemoveAll(x => x.State == EntityState.Deleted);
 
+                // process the remaining special handlers.
                 HonorRuntimeDefaultProperties(records);
                 HonorAutoUpdateProperties(records);
                 HonorStringFormatProperties(records);
-                HandleVersionedModels(records);
-
+                
                 // finally perform the save.
                 return save();
             }
