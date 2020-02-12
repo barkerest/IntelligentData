@@ -6,8 +6,6 @@ using IntelligentData.Enums;
 using IntelligentData.Internal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace IntelligentData
@@ -19,24 +17,15 @@ namespace IntelligentData
     public abstract class IntelligentEntity<TContext>
         where TContext : IntelligentDbContext
     {
-        private readonly TContext _context;
+        /// <summary>
+        /// The linked DB context for this entity.
+        /// </summary>
+        protected TContext DbContext { get; }
 
         /// <summary>
-        /// Gets the linked DB context for this entity.
+        /// The linked logger for this entity.
         /// </summary>
-        /// <remarks>
-        /// This will log a warning for lazy loading.
-        /// </remarks>
-        protected TContext DbContext
-        {
-            get
-            {
-                if (_context.WarnOnLazyLoading)
-                    _context.Logger.LogWarning($"DbContext requested in {GetType()}, lazy loading should be avoided.");
-
-                return _context;
-            }
-        }
+        protected ILogger Logger => DbContext.Logger;
 
         private readonly EntityInfo _info;
 
@@ -46,9 +35,9 @@ namespace IntelligentData
         /// <param name="dbContext">The DB context for this entity.</param>
         protected IntelligentEntity(TContext dbContext)
         {
-            _context = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-            _info    = _context.GetEntityInfoFor(GetType());
-            _context.InitializeEntity(this);
+            DbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+            _info     = DbContext.GetEntityInfoFor(GetType());
+            DbContext.InitializeEntity(this);
         }
 
         /// <summary>
@@ -57,7 +46,7 @@ namespace IntelligentData
         /// <returns>Returns the validation errors (if any) for this entity.</returns>
         public IEnumerable<ValidationResult> GetValidationErrors()
         {
-            var ctx     = new ValidationContext(this, _context.GetInfrastructure(), null);
+            var ctx     = new ValidationContext(this, DbContext.GetInfrastructure(), null);
             var results = new List<ValidationResult>();
             Validator.TryValidateObject(this, ctx, results, true);
             return results;
@@ -70,7 +59,7 @@ namespace IntelligentData
         /// <returns>Returns true if the entity passes validation.</returns>
         public bool IsValidForDatabase(out IEnumerable<ValidationResult> validationResults)
         {
-            var ctx     = new ValidationContext(this, _context.GetInfrastructure(), null);
+            var ctx     = new ValidationContext(this, DbContext.GetInfrastructure(), null);
             var results = new List<ValidationResult>();
             var ret     = Validator.TryValidateObject(this, ctx, results, true);
             validationResults = results;
@@ -83,7 +72,7 @@ namespace IntelligentData
         /// <returns>Returns true if the entity passes validation.</returns>
         public bool IsValidForDatabase()
         {
-            var ctx = new ValidationContext(this, _context.GetInfrastructure(), null);
+            var ctx = new ValidationContext(this, DbContext.GetInfrastructure(), null);
             return Validator.TryValidateObject(this, ctx, null, true);
         }
 
@@ -97,13 +86,11 @@ namespace IntelligentData
         {
             if (_isNew.HasValue) return _isNew.Value;
 
-
             _isNew = _info.HasDefaultPrimaryKey(this) // default primary key is always new.
                      || !ExistsInDatabase();          // but we'll also classify it as new if it doesn't exist in the database.
 
             return _isNew.Value;
         }
-
 
         /// <summary>
         /// Determines if this entity exists in the DB context.
@@ -111,11 +98,11 @@ namespace IntelligentData
         /// <returns>Returns true if the entity exists.</returns>
         public bool ExistsInDatabase()
         {
-            var flag = _context.ChangeTracker.AutoDetectChangesEnabled;
-            _context.ChangeTracker.AutoDetectChangesEnabled = false;
+            var flag = DbContext.ChangeTracker.AutoDetectChangesEnabled;
+            DbContext.ChangeTracker.AutoDetectChangesEnabled = false;
             try
             {
-                var entityEntry = _context.Entry(this);
+                var entityEntry = DbContext.Entry(this);
                 var state       = entityEntry.State;
                 switch (state)
                 {
@@ -134,13 +121,13 @@ namespace IntelligentData
             }
             finally
             {
-                _context.ChangeTracker.AutoDetectChangesEnabled = flag;
+                DbContext.ChangeTracker.AutoDetectChangesEnabled = flag;
             }
 
             if (_info.HasDefaultPrimaryKey(this))
                 return false;
 
-            var dbEntry = _context
+            var dbEntry = DbContext
                 .Find(
                     _info.EntityType,
                     _info.GetPrimaryKey(this)
@@ -149,7 +136,7 @@ namespace IntelligentData
             if (dbEntry is null)
                 return false;
 
-            _context.Entry(dbEntry).State = EntityState.Detached;
+            DbContext.Entry(dbEntry).State = EntityState.Detached;
 
             return true;
         }
@@ -158,7 +145,7 @@ namespace IntelligentData
         {
             try
             {
-                var changes = _context.SaveChanges();
+                var changes = DbContext.SaveChanges();
                 return changes == 0 ? UpdateResult.SuccessNoChanges : UpdateResult.Success;
             }
             catch (DbUpdateConcurrencyException e)
@@ -183,20 +170,20 @@ namespace IntelligentData
         {
             if (IsNewEntity())
             {
-                _context.Entry(this).State = EntityState.Detached;
+                DbContext.Entry(this).State = EntityState.Detached;
                 return UpdateResult.SuccessNoChanges;
             }
 
-            if ((_context.AccessForEntity(this) & AccessLevel.Delete) != AccessLevel.Delete)
+            if ((DbContext.AccessForEntity(this) & AccessLevel.Delete) != AccessLevel.Delete)
                 return UpdateResult.FailedDeleteDisallowed;
 
             if (!ExistsInDatabase())
             {
-                _context.Entry(this).State = EntityState.Detached;
+                DbContext.Entry(this).State = EntityState.Detached;
                 return UpdateResult.SuccessNoChanges;
             }
-            
-            _context.Entry(this).State = EntityState.Deleted;
+
+            DbContext.Entry(this).State = EntityState.Deleted;
             return DoSaveChanges();
         }
 
@@ -209,39 +196,39 @@ namespace IntelligentData
             if (!IsValidForDatabase())
                 return UpdateResult.FailedValidation;
 
-            var state = _context.Entry(this).State;
+            var state = DbContext.Entry(this).State;
 
             switch (state)
             {
                 case EntityState.Deleted:
                 case EntityState.Unchanged:
                 {
-                    if ((_context.AccessForEntity(this) & AccessLevel.Update) != AccessLevel.Update)
+                    if ((DbContext.AccessForEntity(this) & AccessLevel.Update) != AccessLevel.Update)
                         return UpdateResult.FailedUpdateDisallowed;
 
                     // unchanged and deleted get converted to modified since we're saving.
-                    _context.Entry(this).State = EntityState.Modified;
+                    DbContext.Entry(this).State = EntityState.Modified;
                     break;
                 }
-                case EntityState.Modified when (_context.AccessForEntity(this) & AccessLevel.Update) != AccessLevel.Update:
+                case EntityState.Modified when (DbContext.AccessForEntity(this) & AccessLevel.Update) != AccessLevel.Update:
                     return UpdateResult.FailedUpdateDisallowed;
-                case EntityState.Added when (_context.AccessForEntity(this) & AccessLevel.Insert) != AccessLevel.Insert:
+                case EntityState.Added when (DbContext.AccessForEntity(this) & AccessLevel.Insert) != AccessLevel.Insert:
                     return UpdateResult.FailedInsertDisallowed;
                 case EntityState.Detached:
                     if (IsNewEntity())
                     {
-                        if ((_context.AccessForEntity(this) & AccessLevel.Insert) != AccessLevel.Insert)
+                        if ((DbContext.AccessForEntity(this) & AccessLevel.Insert) != AccessLevel.Insert)
                             return UpdateResult.FailedInsertDisallowed;
 
-                        _context.Add(this);
+                        DbContext.Add(this);
                     }
-                    else if ((_context.AccessForEntity(this) & AccessLevel.Update) != AccessLevel.Update)
+                    else if ((DbContext.AccessForEntity(this) & AccessLevel.Update) != AccessLevel.Update)
                     {
                         return UpdateResult.FailedUpdateDisallowed;
                     }
                     else
                     {
-                        _context.Update(this);
+                        DbContext.Update(this);
                     }
 
                     break;

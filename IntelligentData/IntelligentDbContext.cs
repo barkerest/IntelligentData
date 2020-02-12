@@ -13,7 +13,6 @@ using IntelligentData.Internal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging;
 
 namespace IntelligentData
@@ -63,13 +62,6 @@ namespace IntelligentData
         /// </summary>
         public ILogger Logger { get; }
 
-
-        /// <summary>
-        /// Determines if a warning should be issued when an intelligent entity detects lazy loading.
-        /// </summary>
-        public bool WarnOnLazyLoading { get; set; } = true;
-        
-        
         #endregion
         
         #region Access Control

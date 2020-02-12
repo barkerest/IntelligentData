@@ -31,8 +31,12 @@ dotnet add package IntelligentData
 
 // Allow entities to be created and updated, but not deleted.
 [Access(AccessLevel.Insert | AccessLevel.Update)]
-public class MyEntity : IVersionedEntity
+public class MyEntity : IntelligentEntity<MyDbContext>, IVersionedEntity
 {
+    public MyEntity(MyDbContext context) : base(context)
+    {
+    }
+    
     [Key]
     public int ID { get; set; }
 
@@ -83,6 +87,14 @@ public class MyDbContext : IntelligentDbContext
             .HasAutoUpdate(v => (int)v + 1);
     }
 }
+
+var context = new MyDbContext(...);
+var entity = new MyEntity(context)
+{
+    UserName = "John.Doe"
+};
+entity.SaveToDatabase();
+
 ```
 
 
