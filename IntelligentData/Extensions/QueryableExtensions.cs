@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Query.Internal;
@@ -21,7 +22,14 @@ namespace IntelligentData.Extensions
         private static T PrivateField<T>(this object obj, string fieldName)
             => (T) PrivateField(obj, fieldName);
 
-        private static void PrivateSet(this object obj, string propName, object value)
+        private static void SetPrivateField(this object obj, string fieldName, object value)
+        {
+            var field = obj.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException($"Missing {fieldName} field.");
+            field.SetValue(obj, value);
+        }
+        
+        private static void SetPropertyPrivately(this object obj, string propName, object value)
         {
             var type = obj.GetType();
             var prop = type.GetProperty(propName, BindingFlags.Instance | BindingFlags.Public)
@@ -47,87 +55,160 @@ namespace IntelligentData.Extensions
 
         private static void InPatch_Expression(SqlExpression expression)
         {
+            if (expression is null) return;
+            
             switch (expression)
             {
+                case InExpression inExpression:
+                    ProcessInExpression(inExpression);
+                    break;
+                
                 case SqlUnaryExpression sqlUnaryExpression:
-                    {
-                        if (sqlUnaryExpression.Operand is InExpression inex)
-                        {
-                                sqlUnaryExpression.PrivateSet("Operand", ProcessInExpression(inex));
-                        }
-                        else
-                        {
-                                InPatch_Expression(sqlUnaryExpression.Operand);
-                        }
-                    }
+                    InPatch_Expression(sqlUnaryExpression.Operand);
                     break;
                 
                 case CaseExpression caseExpression:
-                    foreach (var c in caseExpression.WhenClauses)
+                    foreach (var whenClause in caseExpression.WhenClauses)
                     {
-                        if (c.Test is InExpression inex)
-                        {
-                            c.PrivateSet("Test", ProcessInExpression(inex));
-                        }
-                        else
-                        {
-                            InPatch_Expression(c.Test);
-                        }
+                        InPatch_Expression(whenClause.Result);
+                        InPatch_Expression(whenClause.Test);
                     }
-
                     break;
 
                 case ExistsExpression existsExpression:
-                case LikeExpression likeExpression:
-                case RowNumberExpression rowNumberExpression:
-                case ScalarSubqueryExpression scalarSubqueryExpression:
-                case SqlBinaryExpression sqlBinaryExpression:
-                case SqlFragmentExpression sqlFragmentExpression:
-                case SqlFunctionExpression sqlFunctionExpression:
+                    InPatch_Select(existsExpression.Subquery);
                     break;
                 
+                case LikeExpression likeExpression:
+                    InPatch_Expression(likeExpression.Match);
+                    InPatch_Expression(likeExpression.Pattern);
+                    InPatch_Expression(likeExpression.EscapeChar);
+                    break;
+                
+                case RowNumberExpression rowNumberExpression:
+                    if (rowNumberExpression.Orderings != null)
+                    {
+                        foreach (var order in rowNumberExpression.Orderings)
+                        {
+                            InPatch_Expression(order.Expression);
+                        }
+                    }
+
+                    if (rowNumberExpression.Partitions != null)
+                    {
+                        foreach (var partition in rowNumberExpression.Partitions)
+                        {
+                            InPatch_Expression(partition);
+                        }
+                    }
+                    break;
+                
+                case ScalarSubqueryExpression scalarSubqueryExpression:
+                    InPatch_Select(scalarSubqueryExpression.Subquery);
+                    break;
+                
+                case SqlBinaryExpression sqlBinaryExpression:
+                    InPatch_Expression(sqlBinaryExpression.Left);
+                    InPatch_Expression(sqlBinaryExpression.Right);
+                    break;
+                
+                case SqlFunctionExpression sqlFunctionExpression:
+                    if (sqlFunctionExpression.Arguments != null)
+                    {
+                        foreach (var argument in sqlFunctionExpression.Arguments)
+                        {
+                            InPatch_Expression(argument);
+                        }
+                    }
+                    break;
+                
+                case SqlFragmentExpression _:
                 case ColumnExpression _:
                 case SqlConstantExpression _:
                 case SqlParameterExpression _:
                     break;
+                
                 default:
-                    throw new InvalidOperationException($"Unknown expression type: {expression.GetType()}");
+                    throw new InvalidOperationException($"Unknown SQL expression type: {expression.GetType()}");
             }
         }
 
-        private static InExpression ProcessInExpression(InExpression expression)
+        private static void ProcessInExpression(InExpression expression)
         {
-            // TODO: Process!!
-            return expression;
+            if (expression.Subquery != null)
+            {
+                InPatch_Select(expression.Subquery);
+            }
+            
+            if (expression.Values is null) return;
+
+            // The version of VisitIn in EF Core 3.1.1 has two requirements.
+            // 1) The Values must be from a SqlConstantExpression
+            // 2) The Value from the SqlConstantExpression must be castable to IEnumerable<object>
+
+            var vals = expression.Values;
+            switch (vals)
+            {
+                case SqlParameterExpression paramEx:
+                    
+                    
+                    break;
+                case SqlConstantExpression sqlConstEx:
+                    // Fix issue 2, castable to IEnumerable<object>
+                    var constEx = sqlConstEx.PrivateField<ConstantExpression>("_constantExpression");
+                    var newVal = ((IEnumerable) constEx.Value).Cast<object>().ToArray();
+                    SetPrivateField(
+                        sqlConstEx,
+                        "_constantExpression",
+                        Expression.Constant(newVal));
+                    
+                    break;
+                default:
+                    throw new InvalidOperationException($"Don't know how to convert {vals.GetType()} to SqlConstantExpression.");
+            }
+
+        }
+
+        private static void InPatch_Select(SelectExpression expression)
+        {
+            InPatch_Expression(expression.Having);
+            InPatch_Expression(expression.Limit);
+            InPatch_Expression(expression.Offset);
+            InPatch_Expression(expression.Predicate);
+            
+            if (expression.Orderings != null)
+            {
+                foreach (var order in expression.Orderings)
+                {
+                    InPatch_Expression(order.Expression);
+                }
+            }
+
+            if (expression.Projection != null)
+            {
+                foreach (var projection in expression.Projection)
+                {
+                    InPatch_Expression(projection.Expression);
+                }
+            }
+
+            if (expression.Tables != null)
+            {
+                foreach (var table in expression.Tables.OfType<SelectExpression>())
+                {
+                    InPatch_Select(table);
+                }
+            }
+
+            if (expression.GroupBy != null)
+            {
+                foreach (var groupBy in expression.GroupBy)
+                {
+                    InPatch_Expression(groupBy);
+                }
+            }
         }
         
-        private static void InPatch_Having(SelectExpression expression)
-        {
-            if (expression.Having is null) return;
-
-            if (expression.Having is InExpression inex)
-            {
-                expression.PrivateSet("Having", ProcessInExpression(inex));
-            }
-            else
-            {
-                InPatch_Expression(expression.Having);
-            }
-        }
-
-        private static void InPatch_Predicate(SelectExpression expression)
-        {
-            if (expression.Predicate is null) return;
-
-            if (expression.Predicate is InExpression inex)
-            {
-                expression.PrivateSet("Predicate", ProcessInExpression(inex));
-            }
-            else
-            {
-                InPatch_Expression(expression.Predicate);
-            }
-        }
         
         /// <summary>
         /// Tries to get the SQL string from this query.
@@ -163,9 +244,8 @@ namespace IntelligentData.Extensions
                 return false;
             }
 
-            InPatch_Having(selectExpression);
-            InPatch_Predicate(selectExpression);
-            
+            InPatch_Select(selectExpression);
+
             var factory = commandCache.PrivateField<IQuerySqlGeneratorFactory>("_querySqlGeneratorFactory");
             if (factory is null)
             {
