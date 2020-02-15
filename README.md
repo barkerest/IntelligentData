@@ -20,6 +20,16 @@ This is an extension library for EntityFramework that adds some intelligence to 
   Define entities with 64-bit version tracking properties just by implementing the interface.
   The context takes care of updating the property on save and tracking the original value for
   concurrency checking.
+* __Intelligent Entities__  
+  Entities tied to a DB context allow the entity reference to accomplish many data management tasks.
+  For instance, the entity can be saved or deleted directly without interfacing with the DB context.
+  The entity also has access to the DB context for custom lazy loading.
+* __GetSqlString and TryGetSqlString__  
+  Allows the retrieval of SQL text from a Queryable object.  In terms of functionality, this is
+  more of an aesthetic extension.  However, this makes it possible to create bulk actions against
+  the database by having the SQL in an easy to use format.  It also makes it possible to double
+  check other functionality as it is added to the library.
+
 
 ## Usage
 
