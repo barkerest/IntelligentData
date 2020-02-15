@@ -34,6 +34,8 @@ namespace IntelligentData.Tests.Examples
 
         public static readonly string NewName = "Tasmanian Devil";
 
+        public override string TableNamePrefix { get; } = "EX";
+
         public ExampleContext(DbContextOptions options, IUserInformationProvider currentUserProvider, ILogger logger)
             : base(options, currentUserProvider, logger)
         {

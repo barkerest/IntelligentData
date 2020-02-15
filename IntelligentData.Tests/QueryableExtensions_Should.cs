@@ -74,7 +74,6 @@ namespace IntelligentData.Tests
                                      .Union(db.ReadInsertEntities.Where(r => !list.Contains(r.Name)).Select(r => new {r.ID, r.Name}))
                                      .Union(db.ReadUpdateEntities.Where(r => !list.Contains(r.Name)).Select(r => new {r.ID, r.Name}));
                         }),
-                                                            
                 }
                 .Select(x => new object[] {x.Item1, x.Item2});
         }

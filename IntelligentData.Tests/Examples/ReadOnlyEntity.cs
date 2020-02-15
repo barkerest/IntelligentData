@@ -6,6 +6,7 @@ using IntelligentData.Enums;
 namespace IntelligentData.Tests.Examples
 {
     [Access(AccessLevel.ReadOnly)]
+    [Table("EX__ReadOnly")]
     public class ReadOnlyEntity : IExampleEntity
     {
         [Key]

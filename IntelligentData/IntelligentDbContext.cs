@@ -13,6 +13,7 @@ using IntelligentData.Internal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace IntelligentData
@@ -27,6 +28,10 @@ namespace IntelligentData
         /// </summary>
         public IUserInformationProvider CurrentUserProvider { get; }
 
+        /// <summary>
+        /// A prefix to apply to table names.
+        /// </summary>
+        public virtual string TableNamePrefix { get; } = null;
         
         /// <summary>
         /// Constructs the intelligent DB context.
@@ -348,6 +353,8 @@ namespace IntelligentData
         {
             base.OnModelCreating(modelBuilder);
 
+            var tableNamePrefix = (string.IsNullOrEmpty(TableNamePrefix) ? "" : (TableNamePrefix + "_"));
+            
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
                 if (!(entityType.ClrType is Type et)) continue;
@@ -436,7 +443,16 @@ namespace IntelligentData
                           .HasAutoUpdate(new AutoUpdateToCurrentUserIDAttribute(typeof(string)));
                     }
                 }
-
+                
+                if (!string.IsNullOrEmpty(tableNamePrefix))
+                {
+                    var name = entityType.GetTableName();
+                    if (!name.StartsWith(tableNamePrefix))
+                    {
+                        xt.ToTable(tableNamePrefix + name);
+                    }
+                }
+                
                 // TODO: Table modifications?
             }
         }
