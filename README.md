@@ -1,6 +1,6 @@
 ﻿# IntelligentData
 
-This is an extension library for EntityFramework that adds some intelligence to models and contexts.
+This is an extension library for EntityFramework that adds some intelligence to entities and contexts.
 
 
 ## Features
