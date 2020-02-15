@@ -24,46 +24,70 @@ namespace IntelligentData.Tests
 
         public static IEnumerable<object[]> GetQueries()
         {
-            return new (string,Func<ExampleContext, IQueryable<ReadOnlyEntity>>)[]
+            return new (string, Func<ExampleContext, IQueryable<object>>)[]
                 {
                     ("Unfiltered", db => db.ReadOnlyEntities),
-                    
+
                     ("Const Filter", db => db.ReadOnlyEntities.Where(r => r.Name != "John")),
-                    
+
                     ("Param Filter", db =>
-                    {
-                        var name = "John";
-                        return db.ReadOnlyEntities.Where(r => r.Name != name);
-                    }),
-                    
+                        {
+                            var name = "John";
+                            return db.ReadOnlyEntities.Where(r => r.Name != name);
+                        }),
+
                     ("In Subquery", db => db.ReadOnlyEntities.Where(r => db.ReadInsertEntities.Select(ri => ri.ID).Contains(r.ID))),
-                    
-                    ("In Const List", db => db.ReadOnlyEntities.Where(r => new []{1,3,5,7,9}.Contains(r.ID))),
-                    
+
+                    ("In Const List", db => db.ReadOnlyEntities.Where(r => new[] {1, 3, 5, 7, 9}.Contains(r.ID))),
+
                     ("In Param List", db =>
-                    {
-                        var list = new[] {1, 3, 5, 7, 9};
-                        return db.ReadOnlyEntities.Where(r => list.Contains(r.ID));
-                    }),
-                    
+                        {
+                            var list = new[] {1, 3, 5, 7, 9};
+                            return db.ReadOnlyEntities.Where(r => list.Contains(r.ID));
+                        }),
+
                     ("In Subquery In Param List", db =>
                         {
                             var list = new[] {"John", "George", "Larry"};
                             return db.ReadOnlyEntities.Where(r => db.ReadInsertEntities.Where(p => !list.Contains(p.Name)).Select(p => p.ID).Contains(r.ID));
-                        })
+                        }),
+                    ("Calculated Column", db => 
+                         db.ReadOnlyEntities.Select(r => new {r.ID, r.Name, SimilarCount = db.ReadInsertEntities.Count(x => x.Name == r.Name)})),
+                    ("Calculated Column In List", db => 
+                         db.ReadOnlyEntities.Where(r => new []{1,3,5,7}.Contains(r.ID))
+                           .Select(r => new {r.ID, r.Name, SimilarCount = db.ReadInsertEntities.Count(x => new[]{2,4,6,8}.Contains(x.ID))})),
+                    ("Simple Union", db =>
+                         db.ReadOnlyEntities.Select(r => new {r.ID, r.Name})
+                           .Union(db.ReadInsertEntities.Select(r => new {r.ID, r.Name}))
+                           .Union(db.ReadUpdateEntities.Select(r => new {r.ID, r.Name}))),
+                    ("Union Filtered by Param", db =>
+                        {
+                            var name = "George";
+                            return db.ReadOnlyEntities.Where(r => r.Name != name).Select(r => new {r.ID, r.Name})
+                                     .Union(db.ReadInsertEntities.Where(r => r.Name != name).Select(r => new {r.ID, r.Name}))
+                                     .Union(db.ReadUpdateEntities.Where(r => r.Name != name).Select(r => new {r.ID, r.Name}));
+                        }),
+                    ("Union Filtered by List", db =>
+                        {
+                            var list = new[] {"John", "George", "Larry"};
+                            return db.ReadOnlyEntities.Where(r => !list.Contains(r.Name)).Select(r => new {r.ID, r.Name})
+                                     .Union(db.ReadInsertEntities.Where(r => !list.Contains(r.Name)).Select(r => new {r.ID, r.Name}))
+                                     .Union(db.ReadUpdateEntities.Where(r => !list.Contains(r.Name)).Select(r => new {r.ID, r.Name}));
+                        }),
+                                                            
                 }
                 .Select(x => new object[] {x.Item1, x.Item2});
         }
-        
+
         [Theory]
         [MemberData(nameof(GetQueries))]
-        public void GetSqlString(string title, Func<ExampleContext,IQueryable<ReadOnlyEntity>> getQuery)
+        public void GetSqlString(string title, Func<ExampleContext, IQueryable<object>> getQuery)
         {
             _output.WriteLine(title);
 
             var query = getQuery(_db);
             Assert.NotNull(query);
-            
+
             var task = Task.Run<string>(() => query.GetSqlString());
 
             if (task.Wait(TimeSpan.FromSeconds(10)))
