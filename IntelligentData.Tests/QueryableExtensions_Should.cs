@@ -24,38 +24,46 @@ namespace IntelligentData.Tests
 
         public static IEnumerable<object[]> GetQueries()
         {
-            return new Func<ExampleContext, IQueryable<ReadOnlyEntity>>[]
+            return new (string,Func<ExampleContext, IQueryable<ReadOnlyEntity>>)[]
                 {
-                    // simple select all
-                    db => db.ReadOnlyEntities,
+                    ("Unfiltered", db => db.ReadOnlyEntities),
                     
-                    // with a simple filter.
-                    db => db.ReadOnlyEntities.Where(r => r.Name != "John"),
+                    ("Const Filter", db => db.ReadOnlyEntities.Where(r => r.Name != "John")),
                     
-                    // with a subquery
-                    db => db.ReadOnlyEntities.Where(r => db.ReadInsertEntities.Select(ri => ri.ID).Contains(r.ID)),
+                    ("Param Filter", db =>
+                    {
+                        var name = "John";
+                        return db.ReadOnlyEntities.Where(r => r.Name != name);
+                    }),
                     
-                    // with a value list.
-                    db => db.ReadOnlyEntities.Where(r => new []{1,3,5,7,9}.Contains(r.ID)),
+                    ("In Subquery", db => db.ReadOnlyEntities.Where(r => db.ReadInsertEntities.Select(ri => ri.ID).Contains(r.ID))),
                     
-                    // with a value list parameter.
-                    db =>
+                    ("In Const List", db => db.ReadOnlyEntities.Where(r => new []{1,3,5,7,9}.Contains(r.ID))),
+                    
+                    ("In Param List", db =>
                     {
                         var list = new[] {1, 3, 5, 7, 9};
                         return db.ReadOnlyEntities.Where(r => list.Contains(r.ID));
-                    }
+                    }),
+                    
+                    ("In Subquery In Param List", db =>
+                        {
+                            var list = new[] {"John", "George", "Larry"};
+                            return db.ReadOnlyEntities.Where(r => db.ReadInsertEntities.Where(p => !list.Contains(p.Name)).Select(p => p.ID).Contains(r.ID));
+                        })
                 }
-                .Select(x => new object[] {x});
+                .Select(x => new object[] {x.Item1, x.Item2});
         }
         
         [Theory]
         [MemberData(nameof(GetQueries))]
-        public void GetSqlString(Func<ExampleContext,IQueryable<ReadOnlyEntity>> getQuery)
+        public void GetSqlString(string title, Func<ExampleContext,IQueryable<ReadOnlyEntity>> getQuery)
         {
+            _output.WriteLine(title);
+
             var query = getQuery(_db);
             Assert.NotNull(query);
-            _output.WriteLine(query.ToString());
-
+            
             var task = Task.Run<string>(() => query.GetSqlString());
 
             if (task.Wait(TimeSpan.FromSeconds(10)))
