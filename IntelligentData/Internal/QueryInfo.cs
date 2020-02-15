@@ -25,10 +25,12 @@ namespace IntelligentData.Internal
         public IQuerySqlGeneratorFactory SqlGeneratorFactory { get; private set; }
 
         private Dictionary<string, object> _params = new Dictionary<string, object>();
-        
-        public static QueryInfo Create(IQueryable query)
-            => Create(query, out _);
 
+        public static QueryInfo Create(IQueryable query)
+        {
+            return Create(query, out var message) ?? throw new InvalidOperationException(message);
+        }
+        
         public static QueryInfo Create(IQueryable query, out string message)
         {
             message = "";
