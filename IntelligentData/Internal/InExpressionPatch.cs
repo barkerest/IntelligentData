@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using IntelligentData.Extensions;
@@ -10,7 +11,7 @@ namespace IntelligentData.Internal
 {
     internal static class InExpressionPatch
     {
-        internal static void PatchInExpressions(this SelectExpression expression, RelationalQueryContext context)
+        internal static void PatchInExpressions(this SelectExpression expression, RelationalQueryContext context, List<string> usedParams = null)
         {
             if (context is null ||
                 expression is null)
@@ -18,16 +19,16 @@ namespace IntelligentData.Internal
                 return;
             }
 
-            expression.Having.PatchInExpressions(context);
-            expression.Limit.PatchInExpressions(context);
-            expression.Offset.PatchInExpressions(context);
-            expression.Predicate.PatchInExpressions(context);
+            expression.Having.PatchInExpressions(context, usedParams);
+            expression.Limit.PatchInExpressions(context, usedParams);
+            expression.Offset.PatchInExpressions(context, usedParams);
+            expression.Predicate.PatchInExpressions(context, usedParams);
 
             if (expression.Orderings != null)
             {
                 foreach (var order in expression.Orderings)
                 {
-                    order.Expression.PatchInExpressions(context);
+                    order.Expression.PatchInExpressions(context, usedParams);
                 }
             }
 
@@ -35,7 +36,7 @@ namespace IntelligentData.Internal
             {
                 foreach (var projection in expression.Projection)
                 {
-                    projection.Expression.PatchInExpressions(context);
+                    projection.Expression.PatchInExpressions(context, usedParams);
                 }
             }
 
@@ -43,7 +44,7 @@ namespace IntelligentData.Internal
             {
                 foreach (var table in expression.Tables)
                 {
-                    table.PatchInExpressions(context);
+                    table.PatchInExpressions(context, usedParams);
                 }
             }
 
@@ -51,12 +52,12 @@ namespace IntelligentData.Internal
             {
                 foreach (var groupBy in expression.GroupBy)
                 {
-                    groupBy.PatchInExpressions(context);
+                    groupBy.PatchInExpressions(context, usedParams);
                 }
             }
         }
 
-        internal static void PatchInExpressions(this InExpression expression, RelationalQueryContext context)
+        internal static void PatchInExpressions(this InExpression expression, RelationalQueryContext context, List<string> usedParams = null)
         {
             if (context is null ||
                 expression is null)
@@ -64,9 +65,9 @@ namespace IntelligentData.Internal
                 return;
             }
 
-            expression.Item.PatchInExpressions(context);
+            expression.Item.PatchInExpressions(context, usedParams);
 
-            expression.Subquery?.PatchInExpressions(context);
+            expression.Subquery?.PatchInExpressions(context, usedParams);
 
             if (expression.Values is null) return;
 
@@ -82,6 +83,12 @@ namespace IntelligentData.Internal
                 {
                     // Fix issue 1 & 2 by grabbing the parameter and converting to a constant IEnumerable<object>.
                     var value = context.ParameterValues[paramEx.Name];
+                    if (usedParams != null &&
+                        !usedParams.Contains(paramEx.Name))
+                    {
+                        usedParams.Add(paramEx.Name);
+                    }
+                    
                     var newVal = (value as IEnumerable)?.Cast<object>().ToArray() ?? new object[0];
                     var newEx = new SqlConstantExpression(Expression.Constant(newVal), paramEx.TypeMapping);
                     if (!expression.SetNonPublicProperty("Values", newEx))
@@ -110,7 +117,7 @@ namespace IntelligentData.Internal
             }
         }
 
-        internal static void PatchInExpressions(this TableExpressionBase expression, RelationalQueryContext context)
+        internal static void PatchInExpressions(this TableExpressionBase expression, RelationalQueryContext context, List<string> usedParams = null)
         {
             if (context is null ||
                 expression is null)
@@ -125,16 +132,16 @@ namespace IntelligentData.Internal
                     break;
                 
                 case SelectExpression selectExpression:
-                    selectExpression.PatchInExpressions(context);
+                    selectExpression.PatchInExpressions(context, usedParams);
                     break;
                 
                 case JoinExpressionBase joinExpression:
-                    joinExpression.Table.PatchInExpressions(context);
+                    joinExpression.Table.PatchInExpressions(context, usedParams);
                     break;
                 
                 case SetOperationBase setOperation:
-                    setOperation.Source1.PatchInExpressions(context);
-                    setOperation.Source2.PatchInExpressions(context);
+                    setOperation.Source1.PatchInExpressions(context, usedParams);
+                    setOperation.Source2.PatchInExpressions(context, usedParams);
                     break;
                 
                 default:
@@ -142,7 +149,7 @@ namespace IntelligentData.Internal
             }
         }
 
-        internal static void PatchInExpressions(this SqlExpression expression, RelationalQueryContext context)
+        internal static void PatchInExpressions(this SqlExpression expression, RelationalQueryContext context, List<string> usedParams = null)
         {
             if (context is null ||
                 expression is null)
@@ -153,30 +160,30 @@ namespace IntelligentData.Internal
             switch (expression)
             {
                 case InExpression inExpression:
-                    inExpression.PatchInExpressions(context);
+                    inExpression.PatchInExpressions(context, usedParams);
                     break;
 
                 case SqlUnaryExpression sqlUnaryExpression:
-                    sqlUnaryExpression.Operand.PatchInExpressions(context);
+                    sqlUnaryExpression.Operand.PatchInExpressions(context, usedParams);
                     break;
 
                 case CaseExpression caseExpression:
                     foreach (var whenClause in caseExpression.WhenClauses)
                     {
-                        whenClause.Result.PatchInExpressions(context);
-                        whenClause.Test.PatchInExpressions(context);
+                        whenClause.Result.PatchInExpressions(context, usedParams);
+                        whenClause.Test.PatchInExpressions(context, usedParams);
                     }
-                    caseExpression.ElseResult.PatchInExpressions(context);
+                    caseExpression.ElseResult.PatchInExpressions(context, usedParams);
                     break;
 
                 case ExistsExpression existsExpression:
-                    existsExpression.Subquery.PatchInExpressions(context);
+                    existsExpression.Subquery.PatchInExpressions(context, usedParams);
                     break;
 
                 case LikeExpression likeExpression:
-                    likeExpression.Match.PatchInExpressions(context);
-                    likeExpression.Pattern.PatchInExpressions(context);
-                    likeExpression.EscapeChar.PatchInExpressions(context);
+                    likeExpression.Match.PatchInExpressions(context, usedParams);
+                    likeExpression.Pattern.PatchInExpressions(context, usedParams);
+                    likeExpression.EscapeChar.PatchInExpressions(context, usedParams);
                     break;
 
                 case RowNumberExpression rowNumberExpression:
@@ -184,7 +191,7 @@ namespace IntelligentData.Internal
                     {
                         foreach (var order in rowNumberExpression.Orderings)
                         {
-                            order.Expression.PatchInExpressions(context);
+                            order.Expression.PatchInExpressions(context, usedParams);
                         }
                     }
 
@@ -192,19 +199,19 @@ namespace IntelligentData.Internal
                     {
                         foreach (var partition in rowNumberExpression.Partitions)
                         {
-                            partition.PatchInExpressions(context);
+                            partition.PatchInExpressions(context, usedParams);
                         }
                     }
 
                     break;
 
                 case ScalarSubqueryExpression scalarSubqueryExpression:
-                    scalarSubqueryExpression.Subquery.PatchInExpressions(context);
+                    scalarSubqueryExpression.Subquery.PatchInExpressions(context, usedParams);
                     break;
 
                 case SqlBinaryExpression sqlBinaryExpression:
-                    sqlBinaryExpression.Left.PatchInExpressions(context);
-                    sqlBinaryExpression.Right.PatchInExpressions(context);
+                    sqlBinaryExpression.Left.PatchInExpressions(context, usedParams);
+                    sqlBinaryExpression.Right.PatchInExpressions(context, usedParams);
                     break;
 
                 case SqlFunctionExpression sqlFunctionExpression:
@@ -212,7 +219,7 @@ namespace IntelligentData.Internal
                     {
                         foreach (var argument in sqlFunctionExpression.Arguments)
                         {
-                            argument.PatchInExpressions(context);
+                            argument.PatchInExpressions(context, usedParams);
                         }
                     }
 
