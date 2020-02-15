@@ -29,6 +29,10 @@ This is an extension library for EntityFramework that adds some intelligence to 
   more of an aesthetic extension.  However, this makes it possible to create bulk actions against
   the database by having the SQL in an easy to use format.  It also makes it possible to double
   check other functionality as it is added to the library.
+* __Table Name Prefix__  
+  Setting a table name prefix on an IntelligentDbContext will cause all table names to be prefixed
+  with that value.  In a shared database, this would allow you to easily segregate different data
+  without worrying about naming conflicts.
 
 
 ## Usage
