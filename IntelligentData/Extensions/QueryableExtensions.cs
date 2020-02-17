@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Linq;
 using IntelligentData.Internal;
-using Microsoft.EntityFrameworkCore.Internal;
-using Microsoft.EntityFrameworkCore.Query;
-using Microsoft.EntityFrameworkCore.Query.Internal;
-using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace IntelligentData.Extensions
