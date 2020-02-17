@@ -53,7 +53,7 @@ namespace IntelligentData.Extensions
 
             try
             {
-                value = new QueryInfo(query).Command.CommandText;
+                value = query.GetSqlString();
                 return true;
             }
             catch (InvalidOperationException)
@@ -76,7 +76,7 @@ namespace IntelligentData.Extensions
 
             try
             {
-                command = new QueryInfo(query).Command;
+                command = query.GetCommand();
                 return true;
             }
             catch (InvalidOperationException)
