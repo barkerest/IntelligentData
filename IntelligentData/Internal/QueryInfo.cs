@@ -6,6 +6,7 @@ using IntelligentData.Extensions;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace IntelligentData.Internal
 {
@@ -24,17 +25,37 @@ namespace IntelligentData.Internal
         
         public IQuerySqlGeneratorFactory SqlGeneratorFactory { get; private set; }
 
-        private Dictionary<string, object> _params = new Dictionary<string, object>();
+        private QuerySqlGenerator _generator;
 
-        public static QueryInfo Create(IQueryable query)
+        public QuerySqlGenerator SqlGenerator
         {
-            return Create(query, out var message) ?? throw new InvalidOperationException(message);
+            get
+            {
+                if (_generator != null) return _generator;
+
+                _generator = SqlGeneratorFactory.Create();
+                
+                return _generator;
+            }
         }
         
-        public static QueryInfo Create(IQueryable query, out string message)
+        private IRelationalCommand _command;
+
+        public IRelationalCommand Command
         {
-            message = "";
-            
+            get
+            {
+                if (_command != null) return _command;
+
+                _command = SqlGenerator.GetCommand(Expression);
+                
+                return _command;
+            }
+        }
+        
+        
+        public static QueryInfo Create(IQueryable query)
+        {
             if (query is null) throw new ArgumentNullException(nameof(query));
             
             var ret = new QueryInfo();
@@ -42,8 +63,7 @@ namespace IntelligentData.Internal
             var provider = query.Provider as EntityQueryProvider;
             if (provider is null)
             {
-                message = "Does not use an entity query provider.";
-                return null;
+                throw new InvalidOperationException("Does not use an entity query provider.");
             }
 
             // ReSharper disable once EF1001
@@ -53,32 +73,45 @@ namespace IntelligentData.Internal
 
             if (ret.CommandCache is null)
             {
-                message = "Does not appear to be a relational command.";
-                return null;
+                throw new InvalidOperationException("Does not appear to be a relational command.");
             }
 
             ret.Context = enumerator.GetNonPublicField<RelationalQueryContext>("_relationalQueryContext");
             if (ret.Context is null)
             {
-                message = "Does not provide a query context.";
-                return null;
+                throw new InvalidOperationException("Does not provide a query context.");
             }
             
             ret.Expression = ret.CommandCache.GetNonPublicField<SelectExpression>("_selectExpression");
             if (ret.Expression is null)
             {
-                message = "Does not provide a select expression.";
-                return null;
+                throw new InvalidOperationException("Does not provide a select expression.");
             }
 
             ret.SqlGeneratorFactory = ret.CommandCache.GetNonPublicField<IQuerySqlGeneratorFactory>("_querySqlGeneratorFactory");
             if (ret.SqlGeneratorFactory is null)
             {
-                message = "Does not provide a SQL generator factory.";
-                return null;
+                throw new InvalidOperationException("Does not provide a SQL generator factory.");
             }
+
+            ret.Expression.PatchInExpressions(ret.Context);
             
             return ret;
+        }
+        
+        public static QueryInfo Create(IQueryable query, out string message)
+        {
+            message = "";
+
+            try
+            {
+                return Create(query);
+            }
+            catch (InvalidOperationException e)
+            {
+                message = e.Message;
+                return null;
+            }
         }
         
     }

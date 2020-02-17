@@ -22,9 +22,10 @@ namespace IntelligentData.Extensions
         /// <exception cref="InvalidOperationException"></exception>
         public static string GetSqlString(this IQueryable query)
         {
-            var result = TryGetSqlString(query, out var value);
-            if (!result) throw new InvalidOperationException(value);
-            return value;
+            var queryInfo = QueryInfo.Create(query) 
+                            ?? throw new InvalidOperationException("Failed to retrieve query info.");
+            
+            return queryInfo.Command.CommandText;
         }
 
         /// <summary>
@@ -40,11 +41,7 @@ namespace IntelligentData.Extensions
             var queryInfo = QueryInfo.Create(query, out value);
             if (queryInfo is null) return false;
             
-            queryInfo.Expression.PatchInExpressions(queryInfo.Context);
-            
-            var generator = queryInfo.SqlGeneratorFactory.Create();
-            var command   = generator.GetCommand(queryInfo.Expression);
-            value = command.CommandText;
+            value = queryInfo.Command.CommandText;
 
             return true;
         }
