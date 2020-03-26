@@ -21,8 +21,10 @@ namespace IntelligentData.Internal
                 throw new InvalidOperationException("Does not use an entity query provider.");
             }
 
-            // ReSharper disable once EF1001
-            var enumerator = provider.Execute<IEnumerable>(query.Expression).GetEnumerator();
+            var enumerator = provider
+                             // ReSharper disable once EF1001
+                             .Execute<IEnumerable>(query.Expression)
+                             .GetEnumerator();
 
             CommandCache = enumerator.GetNonPublicField<RelationalCommandCache>("_relationalCommandCache");
 
@@ -53,13 +55,13 @@ namespace IntelligentData.Internal
             Expression.PatchInExpressions(Context);
         }
         
-        public SelectExpression Expression { get; private set; }
+        public SelectExpression Expression { get; }
         
-        public RelationalQueryContext Context { get; private set; }
+        public RelationalQueryContext Context { get; }
         
-        public RelationalCommandCache CommandCache { get; private set; }
+        public RelationalCommandCache CommandCache { get; }
         
-        public IQuerySqlGeneratorFactory SqlGeneratorFactory { get; private set; }
+        public IQuerySqlGeneratorFactory SqlGeneratorFactory { get; }
 
         private QuerySqlGenerator _generator;
 
