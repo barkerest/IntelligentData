@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 
 namespace IntelligentData.Interfaces
 {
@@ -77,5 +78,12 @@ namespace IntelligentData.Interfaces
         /// Does the language support FROM clauses in UPDATE statements.
         /// </summary>
         bool UpdateSupportsFromClause { get; }
+
+        /// <summary>
+        /// Is this knowledge relevant for the supplied connection?
+        /// </summary>
+        /// <param name="connection"></param>
+        /// <returns></returns>
+        bool RelevantForConnection(IDbConnection connection);
     }
 }
