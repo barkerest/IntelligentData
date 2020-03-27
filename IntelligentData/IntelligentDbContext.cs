@@ -387,7 +387,11 @@ namespace IntelligentData
                         property.HasStringFormat(stringFormatProvider);
                     }
 
-                    // TODO: Process additional attributes?
+                    // Handle customizer attributes. 
+                    foreach (var propertyCustomizer in property.PropertyInfo.GetCustomAttributes().OfType<IPropertyCustomizer>())
+                    {
+                        propertyCustomizer.Customize(xt, property.Name);
+                    }
                 }
 
                 if (typeof(IVersionedEntity).IsAssignableFrom(et))
@@ -451,8 +455,12 @@ namespace IntelligentData
                         xt.ToTable(tableNamePrefix + name);
                     }
                 }
-                
-                // TODO: Table modifications?
+
+                // Handle customizer attributes.
+                foreach (var entityCustomizer in et.GetCustomAttributes().OfType<IEntityCustomizer>())
+                {
+                    entityCustomizer.Customize(xt);
+                }
             }
         }
 

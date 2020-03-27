@@ -58,6 +58,7 @@ namespace IntelligentData.Tests.Examples
         public DbSet<TimestampedEntity>            TimestampedEntities            { get; set; }
         public DbSet<DefaultAccessEntity>          DefaultAccessEntities          { get; set; }
         public DbSet<SmartEntity>                  SmartEntities                  { get; set; }
+        public DbSet<UniqueEntity>                 UniqueEntities                 { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
