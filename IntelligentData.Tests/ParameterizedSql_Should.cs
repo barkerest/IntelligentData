@@ -19,7 +19,7 @@ namespace IntelligentData.Tests
         {
             _output = output ?? throw new ArgumentNullException(nameof(output));
             _logger = new TestOutputLogger(output);
-            _db     = ExampleContext.CreateContext();
+            _db     = ExampleContext.CreateContext(true);
             _db.SetDefaultAccessLevel(AccessLevel.FullAccess);
         }
 
@@ -36,7 +36,7 @@ namespace IntelligentData.Tests
         public void CreateWithParam()
         {
             var param = "John Doe";
-            var psql = new ParameterizedSql<DefaultAccessEntity>(_db.DefaultAccessEntities.Where(x => x.Name == param), _logger);
+            var psql  = new ParameterizedSql<DefaultAccessEntity>(_db.DefaultAccessEntities.Where(x => x.Name == param), _logger);
             Assert.True(psql.IsSelect);
             Assert.False(psql.ReadOnly);
             Assert.NotEmpty(psql.ParameterValues);
@@ -57,7 +57,7 @@ namespace IntelligentData.Tests
         {
             var param = "John Doe";
             var psql  = new ParameterizedSql<DefaultAccessEntity>(_db.DefaultAccessEntities.Where(x => x.Name == param), _logger);
-            var del = psql.ToDelete();
+            var del   = psql.ToDelete();
             Assert.True(psql.IsSelect);
             Assert.False(del.IsSelect);
             Assert.True(del.IsDelete);
@@ -66,14 +66,43 @@ namespace IntelligentData.Tests
         [Fact]
         public void ConvertToUpdate()
         {
-            var p1 = "John Doe";
-            var p2 = "Jane Smith";
+            var p1   = "John Doe";
+            var p2   = "Jane Smith";
             var psql = new ParameterizedSql<DefaultAccessEntity>(_db.DefaultAccessEntities.Where(x => x.Name == p1), _logger);
-            var upd = psql.ToUpdate(x => new DefaultAccessEntity() {Name = p2});
+            var upd  = psql.ToUpdate(x => new DefaultAccessEntity() {Name = p2});
             Assert.True(psql.IsSelect);
             Assert.False(upd.IsSelect);
             Assert.True(upd.IsUpdate);
         }
-        
+
+        [Fact]
+        public void ActuallyUpdate()
+        {
+            var item     = _db.ReadInsertUpdateDeleteEntities.First();
+            var itemName = item.Name;
+            var qry      = _db.ReadInsertUpdateDeleteEntities.Where(x => x.Name != itemName);
+            var cnt      = qry.Count();
+            Assert.True(cnt > 0);
+            var sql = qry.ToParameterizedSql().ToUpdate(x => new ReadInsertUpdateDeleteEntity() {Name = itemName});
+            _output.WriteLine(sql.ToString());
+            _output.WriteLine($"Should update {cnt} records.");
+            Assert.Equal(cnt, sql.ExecuteNonQuery());
+            Assert.Equal(0, qry.Count());
+        }
+
+        [Fact]
+        public void ActuallyDelete()
+        {
+            var item     = _db.ReadInsertUpdateDeleteEntities.First();
+            var itemName = item.Name;
+            var qry      = _db.ReadInsertUpdateDeleteEntities.Where(x => x.Name != itemName);
+            var cnt      = qry.Count();
+            Assert.True(cnt > 0);
+            var sql = qry.ToParameterizedSql().ToDelete();
+            _output.WriteLine(sql.ToString());
+            _output.WriteLine($"Should delete {cnt} records.");
+            Assert.Equal(cnt, sql.ExecuteNonQuery());
+            Assert.Equal(1, _db.ReadInsertUpdateDeleteEntities.Count());
+        }
     }
 }
