@@ -6,7 +6,7 @@
         <Copyright>Copyright © 2020 Beau Barker</Copyright>
         <Product>IntelligentData</Product>
         <Version>1.0.0</Version>
-        <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+        <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
         <PackageProjectUrl>https://github.com/barkerest/IntelligentData</PackageProjectUrl>
     </PropertyGroup>
 
@@ -16,8 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Remove="LICENSE.txt" />
-      <Content Include="LICENSE.txt" />
+        <None Include="licenses/LICENSE.txt" Pack="true" PackagePath="" />
     </ItemGroup>
 
 </Project>
