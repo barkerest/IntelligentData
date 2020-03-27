@@ -116,14 +116,16 @@ SELECT
         /// Creates a parameterized SQL string from the supplied query.
         /// </summary>
         /// <param name="query"></param>
-        public ParameterizedSql(IQueryable<TEntity> query)
+        /// <param name="logger"></param>
+        public ParameterizedSql(IQueryable<TEntity> query, ILogger logger = null)
         {
             _original  = query;
             _info      = new QueryInfo(query);
             _dbContext = _info.Context.Context;
-            _logger = ((IInfrastructure<IServiceProvider>) _dbContext)
-                      .Instance
-                      .GetService(typeof(ILogger<ParameterizedSql<TEntity>>)) as ILogger<ParameterizedSql<TEntity>>;
+            _logger = logger
+                      ?? ((IInfrastructure<IServiceProvider>) _dbContext)
+                         .Instance
+                         .GetService(typeof(ILogger<ParameterizedSql<TEntity>>)) as ILogger<ParameterizedSql<TEntity>>;
 
             if (_dbContext.Model.FindEntityType(typeof(TEntity)) is null)
             {
@@ -136,7 +138,7 @@ SELECT
             _logger?.LogDebug("Generating SQL...");
 
             var cmd        = _info.Command;
-            var sql        = cmd.CommandText;
+            SqlText        = cmd.CommandText;
             var paramNames = cmd.Parameters.Select(x => x.InvariantName).ToArray();
             _parameterValues = _info.Context
                                     .ParameterValues
@@ -145,8 +147,8 @@ SELECT
                                         v => "@" + v.Key.TrimStart('@'),
                                         v => v.Value
                                     );
-            _logger.LogDebug("SQL: " + sql);
-            _logger.LogDebug("Params: " + string.Join(", ", _parameterValues.Select(x => x.Key)));
+            _logger?.LogDebug(SqlText);
+            _logger?.LogDebug("Params: " + string.Join(", ", _parameterValues.Select(x => x.Key)));
 
             var rip = SelectRipper.Match(SqlText);
             if (!rip.Success)

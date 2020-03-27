@@ -80,6 +80,15 @@ namespace IntelligentData.Extensions
                 return false;
             }
         }
+
+        /// <summary>
+        /// Converts a query into a parameterized sql object.
+        /// </summary>
+        /// <param name="query"></param>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <returns></returns>
+        public static ParameterizedSql<TEntity> ToParameterizedSql<TEntity>(this IQueryable<TEntity> query)
+            => new ParameterizedSql<TEntity>(query);
         
     }
 }
