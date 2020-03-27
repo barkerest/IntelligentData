@@ -6,11 +6,17 @@
         <Copyright>Copyright © 2020 Beau Barker</Copyright>
         <Product>IntelligentData</Product>
         <Version>1.0.0</Version>
+        <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.1.1" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="3.1.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="LICENSE.txt" />
+      <Content Include="LICENSE.txt" />
     </ItemGroup>
 
 </Project>
