@@ -33,7 +33,17 @@ This is an extension library for EntityFramework that adds some intelligence to 
   Setting a table name prefix on an IntelligentDbContext will cause all table names to be prefixed
   with that value.  In a shared database, this would allow you to easily segregate different data
   without worrying about naming conflicts.
-
+* __Entity Update Commands__  
+  Allows easily manipulating the database contents without the use of the context change tracker.
+  Primarily this is useful within a transaction when you have many changes to make.  The default
+  behavior of a DbContext is to submit all changes at once when you call SaveChanges().
+  This method generates a massive set of SQL commands to send to the server that may take an
+  excessive amount of time to complete and may even timeout.  By using entity update commands
+  within a transaction involving thousands of database updates, the commands are queued up inside
+  the database server as they are encountered and only committed if the overall operation is 
+  successful.  The database server doesn't have to parse a massive set of commands all at once
+  and a timeout is far less likely to occur.
+ 
 
 ## Usage
 
