@@ -594,6 +594,16 @@ namespace IntelligentData
                     prop.ClrType.IsPrimitive)
                 {
                     var lastId = ExecScalar(GetLastInsertIdCommand(transaction));
+                    
+                    // database generated IDs may be provided in BIGINT format
+                    // and the entity may just be an INT
+                    // perform the conversion now to prevent a type-cast error.
+                    if (lastId is long longId &&
+                        prop.ClrType == typeof(int))
+                    {
+                        lastId = (int) longId;
+                    }
+                    
                     if (prop.PropertyInfo != null)
                     {
                         prop.PropertyInfo.SetValue(entity, lastId);
