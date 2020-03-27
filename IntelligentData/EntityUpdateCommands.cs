@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging;
 
-namespace IntelligentData.Internal
+namespace IntelligentData
 {
     /// <summary>
     /// A basic entity update command set.
