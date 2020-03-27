@@ -43,6 +43,11 @@ This is an extension library for EntityFramework that adds some intelligence to 
   the database server as they are encountered and only committed if the overall operation is 
   successful.  The database server doesn't have to parse a massive set of commands all at once
   and a timeout is far less likely to occur.
+* __Parameterized SQL__  
+  Entity queries can be converted into parameterized SQL objects.  Queries for entity types can
+  then easily be converted into UPDATE or DELETE statements for bulk operations.  Parameterized
+  SQL objects can be easily converted into FormattableStrings or executed against the original
+  DbContext.
  
 
 ## Usage
