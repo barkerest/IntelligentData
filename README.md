@@ -47,7 +47,8 @@ This is an extension library for EntityFramework that adds some intelligence to 
   Entity queries can be converted into parameterized SQL objects.  Queries for entity types can
   then easily be converted into UPDATE or DELETE statements for bulk operations.  Parameterized
   SQL objects can be easily converted into FormattableStrings or executed against the original
-  DbContext.
+  DbContext.  Extension methods are provided to allow BulkUpdate and BulkDelete to be called
+  against an entity query.
  
 
 ## Usage

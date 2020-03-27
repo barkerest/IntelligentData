@@ -2,6 +2,10 @@
 
     <PropertyGroup>
         <TargetFramework>netcoreapp3.1</TargetFramework>
+        <Authors>Beau Barker</Authors>
+        <Copyright>Copyright © 2020 Beau Barker</Copyright>
+        <Product>IntelligentData</Product>
+        <Version>1.0.0</Version>
     </PropertyGroup>
 
     <ItemGroup>
