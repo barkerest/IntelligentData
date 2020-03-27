@@ -25,6 +25,9 @@ namespace IntelligentData
         public Func<string, string> EscapeObjectName { get; } = null;
 
         /// <inheritdoc />
+        public Func<string, string> UnescapeObjectName { get; } = null;
+
+        /// <inheritdoc />
         public string ConcatStringBefore { get; }
 
         /// <inheritdoc />
