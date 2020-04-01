@@ -3,7 +3,12 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using IntelligentData.Interfaces;
+using IntelligentData.Internal;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace IntelligentData.Extensions
@@ -92,6 +97,98 @@ namespace IntelligentData.Extensions
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Creates a COUNT(*) query based on the object being validated.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="excludeCurrentItem"></param>
+        /// <param name="matchingProperties"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public static ICustomCommand CreateFilteredCountQuery(this ValidationContext context, bool excludeCurrentItem, params string[] matchingProperties)
+        {
+            if (context is null) throw new ArgumentNullException(nameof(context));
+            if (matchingProperties is null) throw new ArgumentNullException(nameof(matchingProperties));
+            if (matchingProperties.Length < 1) throw new ArgumentException("At least one matching property must be supplied.");
+            if (!context.TryGetDbContext(out var ctx)) throw new ArgumentException("No DB context is available to construct the SQL.");
+            if (!(ctx.Model.FindEntityType(context.ObjectType) is IEntityType entityType)) throw new ArgumentException($"The {context.ObjectType} type is not part of the {ctx.GetType()} model.");
+
+            var primaryKey = entityType.FindPrimaryKey();
+            var properties = matchingProperties
+                             .Select(x => new {Name = x, Property = entityType.FindProperty(x)})
+                             .ToArray();
+
+            var mismatch = properties.Where(x => x.Property is null).ToArray();
+            if (mismatch.Any())
+            {
+                throw new ArgumentException("The following types do not exist in the entity type: " + string.Join(", ", mismatch.Select(x => x.Name)));
+            }
+
+            if (excludeCurrentItem && primaryKey is null)
+            {
+                throw new ArgumentException($"The {context.ObjectType} type does not have a primary key to exclude the current item.");
+            }
+
+            var tableName = entityType.GetTableName();
+            var knowledge = SqlKnowledge.For(ctx.Database.GetDbConnection())
+                            ?? throw new ArgumentException("No connection available from the DB context.");
+
+            var sql  = new StringBuilder();
+            var args = new List<Func<object, object>>();
+
+            sql.Append("SELECT COUNT(*) FROM ")
+               .Append(knowledge.QuoteObjectName(tableName))
+               .Append(" WHERE (");
+
+            var first = true;
+
+            if (excludeCurrentItem)
+            {
+                foreach (var keyProp in primaryKey.Properties)
+                {
+                    if (!first) sql.Append(" OR ");
+                    first = false;
+                    sql.Append('(')
+                       .Append(knowledge.QuoteObjectName(keyProp.GetColumnName()))
+                       .Append(" <> @p_")
+                       .Append(args.Count)
+                       .Append(')');
+                    if (keyProp.PropertyInfo != null)
+                    {
+                        args.Add(x => keyProp.PropertyInfo.GetValue(x));
+                    }
+                    else
+                    {
+                        args.Add(x => keyProp.FieldInfo.GetValue(x));
+                    }
+                }
+            }
+
+            foreach (var prop in properties.Select(x => x.Property))
+            {
+                if (!first) sql.Append(") AND (");
+                first = false;
+                
+                sql.Append(knowledge.QuoteObjectName(prop.GetColumnName()))
+                   .Append(" = @p_")
+                   .Append(args.Count);
+
+                if (prop.PropertyInfo != null)
+                {
+                    args.Add(x => prop.PropertyInfo.GetValue(x));
+                }
+                else
+                {
+                    args.Add(x => prop.FieldInfo.GetValue(x));
+                }
+            }
+
+            sql.Append(')');
+
+            return new CustomCommand(context.ObjectType, sql.ToString(), args.ToArray());
         }
     }
 }

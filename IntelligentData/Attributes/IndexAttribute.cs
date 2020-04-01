@@ -30,8 +30,8 @@ namespace IntelligentData.Attributes
             return builder;
         }
 
-        private static readonly IDictionary<Type, (string, List<Func<object,object>>)> Queries
-            = new Dictionary<Type, (string, List<Func<object, object>>)>();
+        private static readonly IDictionary<Type, ICustomCommand> Queries
+            = new Dictionary<Type, ICustomCommand>();
 
         public override bool RequiresValidationContext { get; } = true;
 
@@ -40,97 +40,35 @@ namespace IntelligentData.Attributes
         {
             if (value is null) return ValidationResult.Success;
             if (validationContext.ObjectInstance is null) return ValidationResult.Success;
-            
+
             if (validationContext.TryGetDbContext(out var context))
             {
-                var conn = context.Database.GetDbConnection();
-                string query = null;
-                List<Func<object, object>> args = null;
-
+                var                        conn  = context.Database.GetDbConnection();
+                ICustomCommand customCommand = null;
+                
                 lock (Queries)
                 {
                     if (Queries.ContainsKey(validationContext.ObjectType))
                     {
-                        (query, args) = Queries[validationContext.ObjectType];
+                        customCommand = Queries[validationContext.ObjectType];
                     }
                 }
-                
-                if (string.IsNullOrEmpty(query) &&
-                    context.Model.FindEntityType(validationContext.ObjectType) is IEntityType entityType &&
-                    entityType.FindPrimaryKey() is IKey primaryKey &&
-                    entityType.FindProperty(validationContext.MemberName) is IProperty member)
+
+                if (customCommand is null)
                 {
-                    var tableName = entityType.GetTableName();
-                    var knowledge = SqlKnowledge.For(conn);
-                    var sql       = new StringBuilder();
-                    args      = new List<Func<object, object>>();
-
-                    sql.Append("SELECT COUNT(*) FROM ");
-                    sql.Append(knowledge.QuoteObjectName(tableName));
-                    sql.Append(" WHERE (");
-
-                    if (validationContext.ObjectInstance != null)
+                    customCommand = validationContext.CreateFilteredCountQuery(true, validationContext.MemberName);
+                    lock (Queries)
                     {
-                        var first = true;
-                        foreach (var prop in primaryKey.Properties)
-                        {
-                            if (!first) sql.Append(" OR ");
-                            first = false;
-                            sql.Append(knowledge.QuoteObjectName(prop.GetColumnName()));
-                            sql.Append(" <> @p_").Append(args.Count);
-                            if (prop.PropertyInfo != null)
-                            {
-                                args.Add(x => prop.PropertyInfo.GetValue(x));
-                            }
-                            else
-                            {
-                                args.Add(x => prop.FieldInfo.GetValue(x));
-                            }
-                        }
-
-                        sql.Append(") AND (");
-                    }
-
-                    sql.Append(knowledge.QuoteObjectName(member.Name))
-                       .Append(" = @p_")
-                       .Append(args.Count);
-
-                    if (member.PropertyInfo != null)
-                    {
-                        args.Add(x => member.PropertyInfo.GetValue(x));
-                    }
-                    else
-                    {
-                        args.Add(x => member.FieldInfo.GetValue(x));
-                    }
-
-                    sql.Append(')');
-                    query = sql.ToString();
-
-                    if (!string.IsNullOrEmpty(query))
-                    {
-                        lock (Queries)
-                        {
-                            Queries[validationContext.ObjectType] = (query, args);
-                        }
+                        Queries[validationContext.ObjectType] = customCommand;
                     }
                 }
-                
-                if (string.IsNullOrEmpty(query)) return ValidationResult.Success;
-                
+
+                if (string.IsNullOrEmpty(customCommand.SqlStatement)) return ValidationResult.Success;
+
                 if (conn.State == ConnectionState.Broken ||
                     conn.State == ConnectionState.Closed) conn.Open();
 
-                var cmd = conn.CreateCommand();
-                cmd.CommandText = query;
-                for (var i = 0; i < args.Count; i++)
-                {
-                    var arg = args[i];
-                    var p = cmd.CreateParameter();
-                    p.ParameterName = $"@p_{i}";
-                    p.Value = arg(validationContext.ObjectInstance);
-                    cmd.Parameters.Add(p);
-                }
+                var cmd = customCommand.CreateCommand(conn, validationContext.ObjectInstance);
 
                 var cnt = Convert.ToInt32(cmd.ExecuteScalar());
 
@@ -139,9 +77,8 @@ namespace IntelligentData.Attributes
                     return new ValidationResult("has already been used", new[] {validationContext.MemberName});
                 }
             }
-            
+
             return ValidationResult.Success;
         }
-        
     }
 }
