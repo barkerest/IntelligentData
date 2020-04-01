@@ -4,7 +4,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace IntelligentData.Extensions
@@ -44,7 +43,7 @@ namespace IntelligentData.Extensions
                 dbContext = (DbContext) validationContext.GetRequiredService(contextType);
                 return (dbContext != null);
             }
-            
+
             if (validationContext.ObjectType.IsGenericType &&
                 validationContext.ObjectType.GetGenericTypeDefinition() == typeof(IntelligentEntity<>))
             {
@@ -55,8 +54,7 @@ namespace IntelligentData.Extensions
             {
                 // otherwise we need to search for a DbContext with a DbSet<> for our ObjectType.
                 var baseType = typeof(DbContext);
-                var setType = Type.MakeGenericSignatureType(typeof(DbSet<>), validationContext.ObjectType);
-                
+
                 foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
                 {
                     if (asm.IsDynamic ||
@@ -66,7 +64,12 @@ namespace IntelligentData.Extensions
                     {
                         if (type.IsAbstract) continue;
 
-                        if (type.GetProperties(BindingFlags.Public | BindingFlags.Instance).Any(x => x.PropertyType == setType))
+                        var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                        if (props.Any(
+                            x => x.PropertyType.IsGenericType &&
+                                 x.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>) &&
+                                 x.PropertyType.GetGenericArguments()[0] == validationContext.ObjectType
+                        ))
                         {
                             contextType = type;
                             break;
@@ -76,22 +79,19 @@ namespace IntelligentData.Extensions
                     if (contextType != null) break;
                 }
             }
-            
+
             if (contextType != null)
             {
                 lock (EntityDbContextMap)
                 {
                     EntityDbContextMap[validationContext.ObjectType] = contextType;
                 }
-                
+
                 dbContext = (DbContext) validationContext.GetRequiredService(contextType);
                 return (dbContext != null);
             }
 
             return false;
         }
-        
-        
-
     }
 }

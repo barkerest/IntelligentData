@@ -132,7 +132,7 @@ namespace IntelligentData.Attributes
                     cmd.Parameters.Add(p);
                 }
 
-                var cnt = (int) cmd.ExecuteScalar();
+                var cnt = Convert.ToInt32(cmd.ExecuteScalar());
 
                 if (cnt > 0)
                 {

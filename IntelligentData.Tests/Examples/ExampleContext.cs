@@ -1,9 +1,11 @@
-﻿using IntelligentData.Enums;
+﻿using System;
+using IntelligentData.Enums;
 using IntelligentData.Extensions;
 using IntelligentData.Interfaces;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
@@ -99,6 +101,39 @@ namespace IntelligentData.Tests.Examples
             SeedData(() => SaveChanges());
         }
 
+        public static IServiceProvider CreateServiceProvider(IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null)
+        {
+            var col = new ServiceCollection();
+            
+            var logger = new ExampleLogger(outputHelper);
+            
+            col.AddSingleton<ILogger>(logger);
+            
+            if (currentUserProvider is null) currentUserProvider = new ExampleUserInformationProvider() {CurrentUser = ExampleUserInformationProvider.Users.Maximillian};
+
+            col.AddSingleton<IUserInformationProvider>(currentUserProvider);
+
+            var options = CreateOptions();
+            
+            col.AddSingleton<DbContextOptions<ExampleContext>>(options);
+            
+            col.AddSingleton<DbContextOptions>(options);
+
+            using (var preContext = new ExampleContext(options, currentUserProvider, logger))
+            {
+                preContext.Database.EnsureCreated();
+            }
+
+            using (var preContext = new ExampleContext(options, currentUserProvider, logger))
+            {
+                preContext.Seed();
+            }
+
+            col.AddDbContext<ExampleContext>();
+
+            return col.BuildServiceProvider();
+        }
+        
         private static DbContextOptions<ExampleContext> CreateOptions()
         {
             var defaultConn = new SqliteConnection("DataSource=:memory:");

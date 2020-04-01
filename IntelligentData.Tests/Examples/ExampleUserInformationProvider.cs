@@ -7,7 +7,8 @@ namespace IntelligentData.Tests.Examples
         public enum Users
         {
             JohnSmith = 6543,
-            JaneDoe = 9876
+            JaneDoe = 9876,
+            Maximillian = 4001,
         }
 
         public Users CurrentUser { get; set; } = Users.JohnSmith;
