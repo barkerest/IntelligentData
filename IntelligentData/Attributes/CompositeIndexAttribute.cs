@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Data;
+using IntelligentData.Extensions;
 using IntelligentData.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace IntelligentData.Attributes
@@ -34,10 +38,56 @@ namespace IntelligentData.Attributes
             return builder;
         }
 
+        public override bool RequiresValidationContext { get; } = true;
+        
+        private static readonly IDictionary<Type, ICustomCommand> Queries
+            = new Dictionary<Type, ICustomCommand>();
+
         /// <inheritdoc />
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)
         {
-            return base.IsValid(value, validationContext);
+            if (!Unique) return ValidationResult.Success;
+            if (value is null) return ValidationResult.Success;
+            if (validationContext.ObjectInstance is null) return ValidationResult.Success;
+
+            if (validationContext.TryGetDbContext(out var context))
+            {
+                var            conn          = context.Database.GetDbConnection();
+                ICustomCommand customCommand = null;
+                
+                lock (Queries)
+                {
+                    if (Queries.ContainsKey(validationContext.ObjectType))
+                    {
+                        customCommand = Queries[validationContext.ObjectType];
+                    }
+                }
+
+                if (customCommand is null)
+                {
+                    customCommand = validationContext.CreateFilteredCountQuery(true, Properties);
+                    lock (Queries)
+                    {
+                        Queries[validationContext.ObjectType] = customCommand;
+                    }
+                }
+
+                if (string.IsNullOrEmpty(customCommand.SqlStatement)) return ValidationResult.Success;
+
+                if (conn.State == ConnectionState.Broken ||
+                    conn.State == ConnectionState.Closed) conn.Open();
+
+                var cmd = customCommand.CreateCommand(conn, validationContext.ObjectInstance);
+
+                var cnt = Convert.ToInt32(cmd.ExecuteScalar());
+
+                if (cnt > 0)
+                {
+                    return new ValidationResult("has already been used", Properties);
+                }
+            }
+
+            return ValidationResult.Success;
         }
     }
 }

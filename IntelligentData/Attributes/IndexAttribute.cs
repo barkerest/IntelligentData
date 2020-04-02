@@ -38,6 +38,7 @@ namespace IntelligentData.Attributes
         /// <inheritdoc />
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)
         {
+            if (!Unique) return ValidationResult.Success;
             if (value is null) return ValidationResult.Success;
             if (validationContext.ObjectInstance is null) return ValidationResult.Success;
 

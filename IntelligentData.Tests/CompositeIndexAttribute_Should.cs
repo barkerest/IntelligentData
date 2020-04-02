@@ -10,13 +10,13 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
-    public class IndexAttribute_Should
+    public class CompositeIndexAttribute_Should
     {
         private readonly ITestOutputHelper _output;
         private readonly IServiceProvider  _sp;
         private readonly ExampleContext    _db;
 
-        public IndexAttribute_Should(ITestOutputHelper output)
+        public CompositeIndexAttribute_Should(ITestOutputHelper output)
         {
             _output = output ?? throw new ArgumentNullException(nameof(output));
             _sp     = ExampleContext.CreateServiceProvider(outputHelper: output);
@@ -26,27 +26,29 @@ namespace IntelligentData.Tests
         [Fact]
         public void PreventDuplicatesWhenUnique()
         {
-            var name = "John Doe";
-            var item = new UniqueEntity() {Name = name};
+            var a = 1234;
+            var b = 5678;
+            var item = new UniqueEntity() {Name = "FirstItem", ValueA = a, ValueB = b};
 
             _db.UniqueEntities.Add(item);
             Assert.Equal(1, _db.SaveChanges());
 
-            item = new UniqueEntity() {Name = name};
+            item = new UniqueEntity() {Name = "SecondItem", ValueA = a, ValueB = b};
 
-            var context = new ValidationContext(item, _sp, null) { MemberName = "Name" };
+            var context = new ValidationContext(item, _sp, null);
 
-            var attrib = item.GetType().GetProperty("Name")?.GetCustomAttribute<IndexAttribute>()
+            var attrib = item.GetType().GetCustomAttribute<CompositeIndexAttribute>()
                          ?? throw new InvalidOperationException("Missing attribute.");
             
             Assert.True(attrib.Unique);
             
-            var result = attrib.GetValidationResult(item.Name, context);
+            var result = attrib.GetValidationResult(item, context);
 
             Assert.NotNull(result);
             Assert.NotEqual(ValidationResult.Success, result);
             Assert.Matches(@"already\sbeen\sused", result.ErrorMessage);
-            Assert.Contains("Name", result.MemberNames);
+            Assert.Contains("ValueA", result.MemberNames);
+            Assert.Contains("ValueB", result.MemberNames);
             
             _db.UniqueEntities.Add(item);
 

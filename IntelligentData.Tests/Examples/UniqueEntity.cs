@@ -6,6 +6,7 @@ using IntelligentData.Enums;
 namespace IntelligentData.Tests.Examples
 {
     [Access(AccessLevel.FullAccess)]
+    [CompositeIndex(nameof(ValueA), nameof(ValueB), Unique = true)]
     public class UniqueEntity
     {
         [Key]
@@ -16,6 +17,10 @@ namespace IntelligentData.Tests.Examples
         [StringLength(100)]
         [Index(Unique = true)]
         public string Name { get; set; }
+        
+        public int? ValueA { get; set; }
+        
+        public int? ValueB { get; set; }
         
     }
 }
