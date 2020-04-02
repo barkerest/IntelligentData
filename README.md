@@ -49,7 +49,15 @@ This is an extension library for EntityFramework that adds some intelligence to 
   SQL objects can be easily converted into FormattableStrings or executed against the original
   DbContext.  Extension methods are provided to allow BulkUpdate and BulkDelete to be called
   against an entity query.
- 
+* __IEntityCustomizer__  
+  Attributes defined with this interface will allow for runtime customization of the data model
+  in an IntelligentDbContext.
+* __IndexAttribute__ and __CompositeIndexAttribute__  
+  These attributes are examples of the IEntityCustomer interface and also provide model validation
+  if the Unique property is set to true.  They also make use of extensions added to the 
+  ValidationContext type to allow extracting the appropriate DbContext for an object being 
+  validated and for generating basic SQL count statements.
+
 
 ## Usage
 
@@ -127,8 +135,15 @@ entity.SaveToDatabase();
 
 ```
 
+Check out the tests for examples of how the various features are supposed to work.
 
+## Version History
 
+* __1.1.0__  2020-04-02  
+  Added IEntityCustomizer, IndexAttribute, and CompositeIndexAttribute.
+
+* __1.0.0__  2020-03-27  
+  The initial release.
 
 ## License
 
