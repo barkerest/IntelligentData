@@ -69,12 +69,17 @@ SELECT
         /// </summary>
         public string SqlText { get; }
 
-        private readonly string                     _action;
-        private readonly string                     _tableAlias;
-        private readonly string                     _tableName;
-        private readonly string                     _fromClause;
-        private readonly string                     _whereClause;
-        private readonly DbContext                  _dbContext;
+        private readonly string _action;
+        private readonly string _tableAlias;
+        private readonly string _tableName;
+        private readonly string _fromClause;
+        private readonly string _whereClause;
+
+        /// <summary>
+        /// Gets the DB context this parameterized SQL is configured against. 
+        /// </summary>
+        public DbContext DbContext { get; }
+
         private readonly ISqlKnowledge              _knowledge;
         private readonly ILogger                    _logger;
         private readonly Dictionary<string, object> _parameterValues;
@@ -104,7 +109,7 @@ SELECT
             IsGrouped         = source.IsGrouped;
             HasWithExpression = source.HasWithExpression;
             _action           = action.ToUpper();
-            _dbContext        = source._dbContext;
+            DbContext         = source.DbContext;
             _knowledge        = source._knowledge;
             _logger           = source._logger;
             _original         = source._original;
@@ -119,26 +124,26 @@ SELECT
         /// <param name="logger"></param>
         public ParameterizedSql(IQueryable<TEntity> query, ILogger logger = null)
         {
-            _original  = query;
-            _info      = new QueryInfo(query);
-            _dbContext = _info.Context.Context;
+            _original = query;
+            _info     = new QueryInfo(query);
+            DbContext = _info.Context.Context;
             _logger = logger
-                      ?? ((IInfrastructure<IServiceProvider>) _dbContext)
+                      ?? ((IInfrastructure<IServiceProvider>) DbContext)
                          .Instance
                          .GetService(typeof(ILogger<ParameterizedSql<TEntity>>)) as ILogger<ParameterizedSql<TEntity>>;
 
-            if (_dbContext.Model.FindEntityType(typeof(TEntity)) is null)
+            if (DbContext.Model.FindEntityType(typeof(TEntity)) is null)
             {
                 _logger?.LogInformation($"The type {typeof(TEntity)} is not part of the data model, creating read-only SQL.");
                 ReadOnly = true;
             }
 
-            _knowledge = SqlKnowledge.For(_dbContext.Database.GetDbConnection());
+            _knowledge = SqlKnowledge.For(DbContext.Database.GetDbConnection());
 
             _logger?.LogDebug("Generating SQL...");
 
-            var cmd        = _info.Command;
-            SqlText        = cmd.CommandText;
+            var cmd = _info.Command;
+            SqlText = cmd.CommandText;
             var paramNames = cmd.Parameters.Select(x => x.InvariantName).ToArray();
             _parameterValues = _info.Context
                                     .ParameterValues
@@ -236,7 +241,7 @@ SELECT
         {
             if (string.IsNullOrWhiteSpace(_whereClause)) return "";
 
-            var ctx = _dbContext ?? throw new InvalidOperationException("No current context.");
+            var ctx = DbContext ?? throw new InvalidOperationException("No current context.");
             var model = ctx.Model.FindEntityType(typeof(TEntity)) ??
                         throw new InvalidOperationException("Entity missing from context model.");
 
@@ -342,7 +347,7 @@ SELECT
 
             _logger?.LogDebug("Generating UPDATE SQL");
 
-            var context = _dbContext ??
+            var context = DbContext ??
                           throw new InvalidOperationException("No current DbContext available.");
 
             var entityType = context.Model.FindEntityType(typeof(TEntity)) ??
@@ -581,9 +586,9 @@ SELECT
                         {
                             builder.Append(_knowledge.ConcatStringBefore);
                         }
-                        
+
                         AddColumnValue(binaryExpression.Left, builder, paramValues, context, entityType);
-                        
+
                         if (_knowledge.ConcatStringMid == ",")
                         {
                             builder.Append(", ");
@@ -594,7 +599,7 @@ SELECT
                         }
 
                         AddColumnValue(binaryExpression.Right, builder, paramValues, context, entityType);
-                        
+
                         if (string.IsNullOrEmpty(_knowledge.ConcatStringBefore))
                         {
                             builder.Append(')');
@@ -691,7 +696,7 @@ SELECT
         /// <returns></returns>
         public int ExecuteNonQuery(DbTransaction transaction = null)
         {
-            var context = _dbContext ?? throw new InvalidOperationException("No current DbContext.");
+            var context = DbContext ?? throw new InvalidOperationException("No current DbContext.");
 
             var conn = context.Database.GetDbConnection();
             if (conn.State == ConnectionState.Broken ||
@@ -725,7 +730,7 @@ SELECT
         /// <returns></returns>
         public Task<int> ExecuteNonQueryAsync(DbTransaction transaction = null)
         {
-            var context = _dbContext ?? throw new InvalidOperationException("No current DbContext.");
+            var context = DbContext ?? throw new InvalidOperationException("No current DbContext.");
 
             var conn = context.Database.GetDbConnection();
             if (conn.State == ConnectionState.Broken ||

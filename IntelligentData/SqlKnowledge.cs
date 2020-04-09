@@ -4,6 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Text.RegularExpressions;
 using IntelligentData.Interfaces;
+using IntelligentData.Internal;
 
 namespace IntelligentData
 {
@@ -62,7 +63,28 @@ namespace IntelligentData
             return _connTypePattern.IsMatch(connection.GetType().FullName ?? "");
         }
 
-        private SqlKnowledge(string name, string pattern, string open, string close, string insertId, bool deleteAlias, bool updateAlias, bool updateFrom, string concatOp = null, string concatFunc = null)
+        private readonly ISqlTypeNameProvider _typeNameProvider;
+        
+        /// <inheritdoc />
+        public string GetValueTypeName(Type type, int maxLength = 0, int precision = 0, int scale = 0)
+            => _typeNameProvider.GetValueTypeName(type, maxLength, precision, scale);
+
+        private readonly string _tempTableNamePrefix;
+
+        /// <inheritdoc />
+        public string CreateTemporaryTableName(string tableName)
+        {
+            if (string.IsNullOrEmpty(_tempTableNamePrefix)) return tableName;
+            return _tempTableNamePrefix + tableName;
+        }
+
+        private readonly string _createTableGuard;
+
+        /// <inheritdoc />
+        public string GetGuardedCreateTableCommand(string tableName, string body)
+            => string.Format(_createTableGuard, tableName, body);
+        
+        private SqlKnowledge(string name, string pattern, string open, string close, string insertId, bool deleteAlias, bool updateAlias, bool updateFrom, string concatOp = null, string concatFunc = null, ISqlTypeNameProvider typeNameProvider = null, string tempTableNamePrefix = null, string guardedCreateTable = null)
         {
             EngineName                 = name;
             _connTypePattern           = new Regex(pattern, RegexOptions.IgnoreCase);
@@ -72,6 +94,15 @@ namespace IntelligentData
             DeleteSupportsTableAliases = deleteAlias;
             UpdateSupportsFromClause   = updateFrom;
             UpdateSupportsTableAliases = updateAlias;
+
+            _createTableGuard = string.IsNullOrEmpty(guardedCreateTable)
+                                    ? "CREATE TABLE IF NOT EXISTS {0} {1}"
+                                    : guardedCreateTable;
+
+            _tempTableNamePrefix = tempTableNamePrefix;
+
+            _typeNameProvider = typeNameProvider ?? new AnsiSqlTypeProvider();
+            
             if (string.IsNullOrEmpty(concatFunc))
             {
                 ConcatStringBefore = "";
@@ -97,7 +128,8 @@ namespace IntelligentData
                 true,
                 true,
                 false,
-                concatFunc: "CONCAT"
+                concatFunc: "CONCAT",
+                typeNameProvider: new MySqlTypeProvider()
             ),
             new SqlKnowledge(
                 "Generic SQL Server",
@@ -108,7 +140,10 @@ namespace IntelligentData
                 true,
                 true,
                 true,
-                concatOp: "+"
+                concatOp: "+",
+                tempTableNamePrefix: "#",
+                guardedCreateTable: "IF OBJECT_ID('tempdb..{0}') IS NULL BEGIN CREATE TABLE {0} {1} END",
+                typeNameProvider: new MsSqlTypeProvider()
             ),
             new SqlKnowledge(
                 "Generic SQLite",

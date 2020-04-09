@@ -6,7 +6,7 @@ namespace IntelligentData.Interfaces
     /// <summary>
     /// An interface that supplies knowledge about the SQL language.
     /// </summary>
-    public interface ISqlKnowledge
+    public interface ISqlKnowledge : ISqlTypeNameProvider
     {
         /// <summary>
         /// The name of the engine this knowledge applies to.
@@ -94,5 +94,20 @@ namespace IntelligentData.Interfaces
         /// <param name="connection"></param>
         /// <returns></returns>
         bool RelevantForConnection(IDbConnection connection);
+
+        /// <summary>
+        /// Creates a temporary table name, this may return the input value if no modification is required.
+        /// </summary>
+        /// <param name="tableName">The table name to convert to a temporary name.</param>
+        /// <returns></returns>
+        string CreateTemporaryTableName(string tableName);
+
+        /// <summary>
+        /// Gets the create table statement that is guarded against a table already existing.
+        /// </summary>
+        /// <param name="tableName">The name of the table being created.</param>
+        /// <param name="body">The body of the create table statement.</param>
+        /// <returns></returns>
+        string GetGuardedCreateTableCommand(string tableName, string body);
     }
 }
