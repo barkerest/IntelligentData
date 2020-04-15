@@ -48,7 +48,7 @@ namespace IntelligentData
         {
             CurrentUserProvider = currentUserProvider ?? Nobody.Instance;
             Logger              = logger ?? throw new ArgumentNullException(nameof(logger));
-            _createTempLists    = !options.WithoutTemporaryLists();
+            _createTempLists    = options.WithTemporaryLists();
         }
 
         #region Entity Info

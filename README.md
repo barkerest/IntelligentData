@@ -57,6 +57,12 @@ This is an extension library for EntityFramework that adds some intelligence to 
   if the Unique property is set to true.  They also make use of extensions added to the 
   ValidationContext type to allow extracting the appropriate DbContext for an object being 
   validated and for generating basic SQL count statements.
+* __Temporary Lists__  
+  Often times I found myself having multiple somewhat related databases where IDs might be shared.
+  In these cases EF would insert those values into the SQL statement generated, which could lead to
+  excessively huge SQL statements.  Worse, I might need to perform multiple transactions with the
+  list would would cause more giant SQL statements.  To include the temporary tables in your model
+  you will need to call the `WithTemporaryLists()` extension method on your DbContextOptions builder.
 
 
 ## Usage
@@ -126,7 +132,11 @@ public class MyDbContext : IntelligentDbContext
     }
 }
 
-var context = new MyDbContext(...);
+var context = new MyDbContext(
+    new DbContextOptionsBuilder<MyDbContext>()
+        .WithTemporaryLists()
+        .Options,
+    ACurrentUserAccessorObject);
 var entity = new MyEntity(context)
 {
     UserName = "John.Doe"
@@ -138,6 +148,12 @@ entity.SaveToDatabase();
 Check out the tests for examples of how the various features are supposed to work.
 
 ## Version History
+
+* __1.2.1__ 2020-04-15  
+  Made temporary lists default to not included to prevent screwing up migrations.
+
+* __1.2.0__ 2020-04-15  
+  Added temporary lists.
 
 * __1.1.0__  2020-04-02  
   Added IEntityCustomizer, IndexAttribute, and CompositeIndexAttribute.

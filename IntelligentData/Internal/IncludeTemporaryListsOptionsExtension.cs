@@ -4,16 +4,16 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace IntelligentData.Internal
 {
-    internal class SkipTemporaryListsOptionsExtension : IDbContextOptionsExtension
+    internal class IncludeTemporaryListsOptionsExtension : IDbContextOptionsExtension
     {
         private class InfoClass : DbContextOptionsExtensionInfo
         {
-            public InfoClass(SkipTemporaryListsOptionsExtension extension)
+            public InfoClass(IncludeTemporaryListsOptionsExtension extension)
                 : base(extension)
             {
             }
 
-            public override long GetServiceProviderHashCode() => 0x706d655470696b53L;
+            public override long GetServiceProviderHashCode() => 0x706d65545f636e49L;
             
             public override void PopulateDebugInfo(IDictionary<string, string> debugInfo)
             {
@@ -22,10 +22,10 @@ namespace IntelligentData.Internal
 
             public override bool IsDatabaseProvider { get; } = false;
 
-            public override string LogFragment { get; } = "SKIP-TEMP";
+            public override string LogFragment { get; } = "INC-TEMP";
         }
 
-        public SkipTemporaryListsOptionsExtension()
+        public IncludeTemporaryListsOptionsExtension()
         {
             Info = new InfoClass(this);
         }

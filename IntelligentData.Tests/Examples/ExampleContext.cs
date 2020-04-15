@@ -140,9 +140,9 @@ namespace IntelligentData.Tests.Examples
             defaultConn.Open();
             var builder = new DbContextOptionsBuilder<ExampleContext>();
             builder.UseSqlite(defaultConn);
-            if (!withTempTables)
+            if (withTempTables)
             {
-                builder.WithoutTemporaryLists();
+                builder.WithTemporaryLists();
             }
             return builder.Options;
         }
