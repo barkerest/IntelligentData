@@ -138,7 +138,7 @@ SELECT
                 ReadOnly = true;
             }
 
-            _knowledge = SqlKnowledge.For(DbContext.Database.GetDbConnection());
+            _knowledge = SqlKnowledge.For(DbContext.Database.ProviderName);
 
             _logger?.LogDebug("Generating SQL...");
 

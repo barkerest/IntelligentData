@@ -89,6 +89,13 @@ namespace IntelligentData.Interfaces
         bool UpdateSupportsFromClause { get; }
 
         /// <summary>
+        /// Is this knowledge relevant for the supplied provider?
+        /// </summary>
+        /// <param name="providerName"></param>
+        /// <returns></returns>
+        bool RelevantForProvider(string providerName);
+        
+        /// <summary>
         /// Is this knowledge relevant for the supplied connection?
         /// </summary>
         /// <param name="connection"></param>

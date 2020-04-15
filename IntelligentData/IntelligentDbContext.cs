@@ -601,7 +601,7 @@ namespace IntelligentData
             get
             {
                 if (_knowledge != null) return _knowledge;
-                _knowledge = SqlKnowledge.For(Database.GetDbConnection());
+                _knowledge = SqlKnowledge.For(Database.ProviderName);
                 return _knowledge;
             }
         }

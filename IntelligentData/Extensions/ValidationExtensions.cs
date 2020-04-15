@@ -133,7 +133,7 @@ namespace IntelligentData.Extensions
             }
 
             var tableName = entityType.GetTableName();
-            var knowledge = SqlKnowledge.For(ctx.Database.GetDbConnection())
+            var knowledge = SqlKnowledge.For(ctx.Database.ProviderName)
                             ?? throw new ArgumentException("No connection available from the DB context.");
 
             var sql  = new StringBuilder();

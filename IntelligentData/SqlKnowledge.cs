@@ -53,7 +53,16 @@ namespace IntelligentData
         public override string ToString()
             => EngineName;
 
+        private readonly Regex _provTypePattern;
         private readonly Regex _connTypePattern;
+
+        /// <inheritdoc />
+        public bool RelevantForProvider(string providerName)
+        {
+            if (string.IsNullOrEmpty(providerName)) throw new ArgumentNullException(nameof(providerName));
+
+            return _provTypePattern.IsMatch(providerName);
+        }
 
         /// <inheritdoc />
         public bool RelevantForConnection(IDbConnection connection)
@@ -64,7 +73,7 @@ namespace IntelligentData
         }
 
         private readonly ISqlTypeNameProvider _typeNameProvider;
-        
+
         /// <inheritdoc />
         public string GetValueTypeName(Type type, int maxLength = 0, int precision = 0, int scale = 0)
             => _typeNameProvider.GetValueTypeName(type, maxLength, precision, scale);
@@ -83,11 +92,12 @@ namespace IntelligentData
         /// <inheritdoc />
         public string GetGuardedCreateTableCommand(string tableName, string body)
             => string.Format(_createTableGuard, tableName, body);
-        
-        private SqlKnowledge(string name, string pattern, string open, string close, string insertId, bool deleteAlias, bool updateAlias, bool updateFrom, string concatOp = null, string concatFunc = null, ISqlTypeNameProvider typeNameProvider = null, string tempTableNamePrefix = null, string guardedCreateTable = null)
+
+        private SqlKnowledge(string name, string provPattern, string connPattern, string open, string close, string insertId, bool deleteAlias, bool updateAlias, bool updateFrom, string concatOp = null, string concatFunc = null, ISqlTypeNameProvider typeNameProvider = null, string tempTableNamePrefix = null, string guardedCreateTable = null)
         {
             EngineName                 = name;
-            _connTypePattern           = new Regex(pattern, RegexOptions.IgnoreCase);
+            _provTypePattern           = new Regex(provPattern, RegexOptions.IgnoreCase);
+            _connTypePattern           = new Regex(connPattern, RegexOptions.IgnoreCase);
             ObjectOpenQuote            = open;
             ObjectCloseQuote           = close;
             GetLastInsertedIdCommand   = insertId;
@@ -102,7 +112,7 @@ namespace IntelligentData
             _tempTableNamePrefix = tempTableNamePrefix;
 
             _typeNameProvider = typeNameProvider ?? new AnsiSqlTypeProvider();
-            
+
             if (string.IsNullOrEmpty(concatFunc))
             {
                 ConcatStringBefore = "";
@@ -121,6 +131,7 @@ namespace IntelligentData
         {
             new SqlKnowledge(
                 "Generic MySQL",
+                @"\.(mysql|mariadb)$",
                 "(mysql|mariadb)",
                 "`",
                 "`",
@@ -133,6 +144,7 @@ namespace IntelligentData
             ),
             new SqlKnowledge(
                 "Generic SQL Server",
+                @"\.(sqlserver)$",
                 @"^(system|microsoft)\.data\.sqlclient",
                 "[",
                 "]",
@@ -147,6 +159,7 @@ namespace IntelligentData
             ),
             new SqlKnowledge(
                 "Generic SQLite",
+                @"\.(sqlite3?)$",
                 "(sqlite)",
                 "\"",
                 "\"",
@@ -157,6 +170,24 @@ namespace IntelligentData
                 concatOp: "||"
             ),
         };
+
+        /// <summary>
+        /// Gets the SQL knowledge for the supplied provider.
+        /// </summary>
+        /// <param name="providerName"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static ISqlKnowledge For(string providerName)
+        {
+            if (string.IsNullOrEmpty(providerName)) throw new ArgumentNullException(nameof(providerName));
+            ISqlKnowledge[] known;
+            lock (Known)
+            {
+                known = Known.ToArray();
+            }
+
+            return known.FirstOrDefault(x => x.RelevantForProvider(providerName));
+        }
 
         /// <summary>
         /// Gets the SQL knowledge for the supplied connection.

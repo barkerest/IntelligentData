@@ -89,9 +89,9 @@ namespace IntelligentData
                                .Where(x => !stamps.Contains(x.GetColumnType().ToLower()))
                                .ToArray();
 
-            var conn = Context.Database.GetDbConnection();
+            var conn = Context.Database.ProviderName;
             Knowledge = SqlKnowledge.For(conn)
-                        ?? throw new ArgumentException($"The {conn.GetType()} connection does not have registered SQL knowledge.");
+                        ?? throw new ArgumentException($"The {conn} provider does not have registered SQL knowledge.");
         }
 
         #region IsProperty
