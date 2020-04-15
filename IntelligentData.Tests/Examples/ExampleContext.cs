@@ -101,7 +101,7 @@ namespace IntelligentData.Tests.Examples
             SeedData(() => SaveChanges());
         }
 
-        public static IServiceProvider CreateServiceProvider(IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null)
+        public static IServiceProvider CreateServiceProvider(IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true)
         {
             var col = new ServiceCollection();
             
@@ -113,7 +113,7 @@ namespace IntelligentData.Tests.Examples
 
             col.AddSingleton<IUserInformationProvider>(currentUserProvider);
 
-            var options = CreateOptions();
+            var options = CreateOptions(withTempTables);
             
             col.AddSingleton<DbContextOptions<ExampleContext>>(options);
             
@@ -134,18 +134,22 @@ namespace IntelligentData.Tests.Examples
             return col.BuildServiceProvider();
         }
         
-        private static DbContextOptions<ExampleContext> CreateOptions()
+        private static DbContextOptions<ExampleContext> CreateOptions(bool withTempTables = true)
         {
             var defaultConn = new SqliteConnection("DataSource=:memory:");
             defaultConn.Open();
             var builder = new DbContextOptionsBuilder<ExampleContext>();
             builder.UseSqlite(defaultConn);
+            if (!withTempTables)
+            {
+                builder.WithoutTemporaryLists();
+            }
             return builder.Options;
         }
 
-        public static ExampleContext CreateContext(bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null)
+        public static ExampleContext CreateContext(bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true)
         {
-            var options = CreateOptions();
+            var options = CreateOptions(withTempTables);
             using (var context = new ExampleContext(options, currentUserProvider, new ExampleLogger()))
             {
                 context.Database.EnsureCreated();
@@ -156,9 +160,9 @@ namespace IntelligentData.Tests.Examples
             return ret;
         }
 
-        public static ExampleContext CreateContext(out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null)
+        public static ExampleContext CreateContext(out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true)
         {
-            var options = CreateOptions();
+            var options = CreateOptions(withTempTables);
             using (var context = new ExampleContext(options, currentUserProvider, new ExampleLogger()))
             {
                 context.Database.EnsureCreated();

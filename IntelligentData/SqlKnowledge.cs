@@ -88,12 +88,17 @@ namespace IntelligentData
         }
 
         private readonly string _createTableGuard;
+        private readonly string _createTempTableGuard;
 
         /// <inheritdoc />
         public string GetGuardedCreateTableCommand(string tableName, string body)
             => string.Format(_createTableGuard, tableName, body);
 
-        private SqlKnowledge(string name, string provPattern, string connPattern, string open, string close, string insertId, bool deleteAlias, bool updateAlias, bool updateFrom, string concatOp = null, string concatFunc = null, ISqlTypeNameProvider typeNameProvider = null, string tempTableNamePrefix = null, string guardedCreateTable = null)
+        /// <inheritdoc />
+        public string GetCreateTemporaryTableCommand(string tableName, string body)
+            => string.Format(_createTempTableGuard, tableName, body);
+        
+        private SqlKnowledge(string name, string provPattern, string connPattern, string open, string close, string insertId, bool deleteAlias, bool updateAlias, bool updateFrom, string concatOp = null, string concatFunc = null, ISqlTypeNameProvider typeNameProvider = null, string tempTableNamePrefix = null, string guardedCreateTable = null, string tempCreateTable = null)
         {
             EngineName                 = name;
             _provTypePattern           = new Regex(provPattern, RegexOptions.IgnoreCase);
@@ -108,6 +113,10 @@ namespace IntelligentData
             _createTableGuard = string.IsNullOrEmpty(guardedCreateTable)
                                     ? "CREATE TABLE IF NOT EXISTS {0} {1}"
                                     : guardedCreateTable;
+
+            _createTempTableGuard = string.IsNullOrEmpty(tempCreateTable)
+                                        ? "CREATE TEMPORARY TABLE IF NOT EXISTS {0} {1}"
+                                        : tempCreateTable;
 
             _tempTableNamePrefix = tempTableNamePrefix;
 
@@ -154,7 +163,8 @@ namespace IntelligentData
                 true,
                 concatOp: "+",
                 tempTableNamePrefix: "#",
-                guardedCreateTable: "IF OBJECT_ID('tempdb..{0}') IS NULL BEGIN CREATE TABLE {0} {1} END",
+                guardedCreateTable: "IF OBJECT_ID('{0}') IS NULL BEGIN CREATE TABLE {0} {1} END",
+                tempCreateTable: "IF OBJECT_ID('tempdb..{0}') IS NULL BEGIN CREATE TABLE {0} {1} END",
                 typeNameProvider: new MsSqlTypeProvider()
             ),
             new SqlKnowledge(

@@ -65,7 +65,7 @@ namespace IntelligentData.Internal
         /// <inheritdoc />
         public string GetCreateTableCommand(ISqlKnowledge knowledge)
         {
-            return knowledge.GetGuardedCreateTableCommand(
+            return knowledge.GetCreateTemporaryTableCommand(
                 GetTableName(knowledge),
                 "(ListId INTEGER NOT NULL, EntryValue " +
                 GetValueTypeName(knowledge) +

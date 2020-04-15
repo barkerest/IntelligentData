@@ -116,5 +116,13 @@ namespace IntelligentData.Interfaces
         /// <param name="body">The body of the create table statement.</param>
         /// <returns></returns>
         string GetGuardedCreateTableCommand(string tableName, string body);
+
+        /// <summary>
+        /// Gets the create temporary table statement that is guarded against a table already existing. 
+        /// </summary>
+        /// <param name="tableName">The name of the temporary table begin created.  This should already be in the appropriate format.</param>
+        /// <param name="body">The body of the create table statement.</param>
+        /// <returns></returns>
+        string GetCreateTemporaryTableCommand(string tableName, string body);
     }
 }
