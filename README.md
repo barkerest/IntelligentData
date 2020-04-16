@@ -149,6 +149,9 @@ Check out the tests for examples of how the various features are supposed to wor
 
 ## Version History
 
+* __1.2.2__ 2020-04-16  
+  Made the attribute scanning include inherited attributes within the IntelligentDbContext.
+
 * __1.2.1__ 2020-04-15  
   Made temporary lists default to not included to prevent screwing up migrations.
 

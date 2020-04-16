@@ -94,7 +94,7 @@ namespace IntelligentData
 
                 // the true default is readonly. 
                 var level = AccessLevel.ReadOnly;
-                var attribs = entityType.GetCustomAttributes()
+                var attribs = entityType.GetCustomAttributes(true)
                                         .OfType<IEntityAccessProvider>()
                                         .ToArray();
 
@@ -372,7 +372,7 @@ namespace IntelligentData
                 foreach (var property in entityType.GetProperties())
                 {
                     // Annotate the properties with runtime defaults.
-                    if (property.PropertyInfo.GetCustomAttributes()
+                    if (property.PropertyInfo.GetCustomAttributes(true)
                                 .OfType<IRuntimeDefaultValueProvider>()
                                 .FirstOrDefault() is IRuntimeDefaultValueProvider runtimeDefaultValueProvider)
                     {
@@ -380,7 +380,7 @@ namespace IntelligentData
                     }
 
                     // Annotate the properties with automatically updated values.
-                    if (property.PropertyInfo.GetCustomAttributes()
+                    if (property.PropertyInfo.GetCustomAttributes(true)
                                 .OfType<IAutoUpdateValueProvider>()
                                 .FirstOrDefault() is IAutoUpdateValueProvider autoUpdateValueProvider)
                     {
@@ -388,7 +388,7 @@ namespace IntelligentData
                     }
 
                     // Annotate the properties with default values computed at runtime.
-                    if (property.PropertyInfo.GetCustomAttributes()
+                    if (property.PropertyInfo.GetCustomAttributes(true)
                                 .OfType<IStringFormatProvider>()
                                 .FirstOrDefault() is IStringFormatProvider stringFormatProvider)
                     {
@@ -396,7 +396,7 @@ namespace IntelligentData
                     }
 
                     // Handle customizer attributes. 
-                    foreach (var propertyCustomizer in property.PropertyInfo.GetCustomAttributes().OfType<IPropertyCustomizer>())
+                    foreach (var propertyCustomizer in property.PropertyInfo.GetCustomAttributes(true).OfType<IPropertyCustomizer>())
                     {
                         propertyCustomizer.Customize(xt, property.Name);
                     }
@@ -465,7 +465,7 @@ namespace IntelligentData
                 }
 
                 // Handle customizer attributes.
-                foreach (var entityCustomizer in et.GetCustomAttributes().OfType<IEntityCustomizer>())
+                foreach (var entityCustomizer in et.GetCustomAttributes(true).OfType<IEntityCustomizer>())
                 {
                     entityCustomizer.Customize(xt);
                 }
