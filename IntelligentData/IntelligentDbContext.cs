@@ -150,6 +150,8 @@ namespace IntelligentData
             {
                 // non-permitted changes are removed from the ChangeTracker to prevent them from being saved.
 
+                Logger.LogWarning($"Cannot make changes to {entry.Entity.GetType()} entity: {entry.Entity}");
+                
                 if (entry.State == EntityState.Added)
                 {
                     // detach the new item.
