@@ -149,6 +149,10 @@ Check out the tests for examples of how the various features are supposed to wor
 
 ## Version History
 
+* __1.2.3__ 2020-04-23  
+  Add warnings when entities are removed from the change tracker.  
+  Made DefaultAccessLevel abstract to force setting a value in implementations. 
+
 * __1.2.2__ 2020-04-16  
   Made the attribute scanning include inherited attributes within the IntelligentDbContext.
 

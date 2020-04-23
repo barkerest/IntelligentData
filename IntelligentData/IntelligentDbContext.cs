@@ -81,7 +81,7 @@ namespace IntelligentData
         /// <summary>
         /// Defines the default access level for entities when no attribute or interface method is available.
         /// </summary>
-        public virtual AccessLevel DefaultAccessLevel { get; } = AccessLevel.ReadOnly;
+        public abstract AccessLevel DefaultAccessLevel { get; }
 
         private readonly Dictionary<Type, AccessLevel> _defaultAccessLevels = new Dictionary<Type, AccessLevel>();
         private          bool                          _allowSeedData       = false;
