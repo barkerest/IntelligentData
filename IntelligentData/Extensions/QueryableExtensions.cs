@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using IntelligentData.Internal;
@@ -95,20 +96,22 @@ namespace IntelligentData.Extensions
         /// Deletes the records that would be returned by the query.
         /// </summary>
         /// <param name="query"></param>
+        /// <param name="transaction"></param>
         /// <typeparam name="TEntity"></typeparam>
         /// <returns>Returns the number of records deleted.</returns>
-        public static int BulkDelete<TEntity>(this IQueryable<TEntity> query)
-            => new ParameterizedSql<TEntity>(query).ToDelete().ExecuteNonQuery();
-        
+        public static int BulkDelete<TEntity>(this IQueryable<TEntity> query, DbTransaction transaction = null)
+            => new ParameterizedSql<TEntity>(query).ToDelete().ExecuteNonQuery(transaction);
+
         /// <summary>
         /// Updates the records that would be returned by the query.
         /// </summary>
         /// <param name="query"></param>
         /// <param name="newValues">An expression creating a new TEntity with the new values to set.</param>
+        /// <param name="transaction"></param>
         /// <typeparam name="TEntity"></typeparam>
         /// <returns>Returns the number of records updated.</returns>
-        public static int BulkUpdate<TEntity>(this IQueryable<TEntity> query, Expression<Func<TEntity, TEntity>> newValues)
-            => new ParameterizedSql<TEntity>(query).ToUpdate(newValues).ExecuteNonQuery();
+        public static int BulkUpdate<TEntity>(this IQueryable<TEntity> query, Expression<Func<TEntity, TEntity>> newValues, DbTransaction transaction = null)
+            => new ParameterizedSql<TEntity>(query).ToUpdate(newValues).ExecuteNonQuery(transaction);
         
         
     }
