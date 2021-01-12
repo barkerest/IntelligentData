@@ -149,6 +149,12 @@ Check out the tests for examples of how the various features are supposed to wor
 
 ## Version History
 
+* __1.2.5__ 2021-01-12
+  Allow for blank table name prefix (null, empty, or whitespace) to be ignored.
+
+* __1.2.4__ 2020-05-26
+  Add transaction parameter to BulkDelete and BulkUpdate.
+
 * __1.2.3__ 2020-04-23  
   Add warnings when entities are removed from the change tracker.  
   Made DefaultAccessLevel abstract to force setting a value in implementations. 
@@ -172,7 +178,7 @@ Check out the tests for examples of how the various features are supposed to wor
 
 Licensed under the [MIT License](https://opensource.org/licenses/MIT).
 
-Copyright (C) 2020 Beau Barker
+Copyright (C) 2020-2021 Beau Barker
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
