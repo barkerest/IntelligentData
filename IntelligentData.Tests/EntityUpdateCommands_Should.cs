@@ -9,7 +9,7 @@ using Xunit.Sdk;
 
 namespace IntelligentData.Tests
 {
-    public class EntityUpdateCommands_Should
+    public class EntityUpdateCommands_Should : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private readonly ILogger _logger;
@@ -45,6 +45,11 @@ namespace IntelligentData.Tests
             commands.Remove(entity, null);
             Assert.Equal(0, _db.DefaultAccessEntities.Count(x => x.Name == "John Doe"));
             Assert.Equal(0, _db.DefaultAccessEntities.Count(x => x.Name == "Jane Smith"));
+        }
+
+        public void Dispose()
+        {
+            _db?.Dispose();
         }
     }
 }

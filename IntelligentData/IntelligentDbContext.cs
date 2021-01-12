@@ -362,7 +362,8 @@ namespace IntelligentData
         {
             base.OnModelCreating(modelBuilder);
 
-            var tableNamePrefix = (string.IsNullOrEmpty(TableNamePrefix) ? "" : (TableNamePrefix + "_"));
+            var tableNamePrefix = string.IsNullOrWhiteSpace(TableNamePrefix) ? "" : TableNamePrefix.Trim();
+            if (tableNamePrefix != "") tableNamePrefix += "_";
 
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
@@ -370,6 +371,7 @@ namespace IntelligentData
                 if (entityType.IsKeyless) continue;
 
                 var xt = modelBuilder.Entity(et);
+                if (xt is null) continue;
 
                 foreach (var property in entityType.GetProperties())
                 {
@@ -457,7 +459,7 @@ namespace IntelligentData
                     }
                 }
 
-                if (!string.IsNullOrEmpty(tableNamePrefix))
+                if (tableNamePrefix != "")
                 {
                     var name = entityType.GetTableName();
                     if (!name.StartsWith(tableNamePrefix))

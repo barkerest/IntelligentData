@@ -11,7 +11,7 @@ using Xunit.Sdk;
 
 namespace IntelligentData.Tests
 {
-    public class QueryableExtensions_Should
+    public class QueryableExtensions_Should : IDisposable
     {
         private ExampleContext    _db;
         private ITestOutputHelper _output;
@@ -97,6 +97,11 @@ namespace IntelligentData.Tests
             {
                 throw new XunitException("Timeout waiting for SQL generation.");
             }
+        }
+
+        public void Dispose()
+        {
+            _db?.Dispose();
         }
     }
 }

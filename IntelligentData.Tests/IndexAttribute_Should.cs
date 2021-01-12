@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
-    public class IndexAttribute_Should
+    public class IndexAttribute_Should : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private readonly IServiceProvider  _sp;
@@ -56,6 +56,11 @@ namespace IntelligentData.Tests
 
             Assert.NotNull(x.InnerException);
             Assert.Matches("unique", x.InnerException.Message.ToLower());
+        }
+
+        public void Dispose()
+        {
+            _db?.Dispose();
         }
     }
 }

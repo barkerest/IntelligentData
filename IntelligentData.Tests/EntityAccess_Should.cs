@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
-    public class EntityAccess_Should
+    public class EntityAccess_Should : IDisposable
     {
         private ExampleContext    _db;
         private ITestOutputHelper _output;
@@ -207,6 +207,11 @@ namespace IntelligentData.Tests
                 Assert.Equal(0, changes);
                 Assert.True(set.Any(x => x.ID == entity.ID));
             }
+        }
+
+        public void Dispose()
+        {
+            _db?.Dispose();
         }
     }
 }

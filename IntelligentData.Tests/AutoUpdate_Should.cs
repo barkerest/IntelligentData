@@ -7,7 +7,7 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
-    public class AutoUpdate_Should
+    public class AutoUpdate_Should : IDisposable
     {
         private ExampleContext    _db;
         private ITestOutputHelper _output;
@@ -70,6 +70,11 @@ namespace IntelligentData.Tests
             // make sure the updated instant does change.
             Assert.NotEqual(instant, item.UpdatedInstant);
             Assert.True(item.UpdatedInstant > instant);
+        }
+
+        public void Dispose()
+        {
+            _db?.Dispose();
         }
     }
 }

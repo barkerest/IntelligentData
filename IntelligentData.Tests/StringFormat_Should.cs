@@ -7,7 +7,7 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
-    public class StringFormat_Should
+    public class StringFormat_Should : IDisposable
     {
         private ExampleContext _db;
         private ITestOutputHelper _output;
@@ -78,5 +78,9 @@ namespace IntelligentData.Tests
             Assert.Equal(expected, item.UpperCaseString);
         }
 
+        public void Dispose()
+        {
+            _db?.Dispose();
+        }
     }
 }

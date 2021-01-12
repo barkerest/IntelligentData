@@ -6,7 +6,7 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
-    public class DefaultAccess_Should
+    public class DefaultAccess_Should : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private readonly ExampleContext    _db;
@@ -52,6 +52,10 @@ namespace IntelligentData.Tests
                 Assert.Equal(expected, actual);
             }
         }
-        
+
+        public void Dispose()
+        {
+            _db?.Dispose();
+        }
     }
 }

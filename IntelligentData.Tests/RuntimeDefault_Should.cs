@@ -7,7 +7,7 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
-    public class RuntimeDefault_Should
+    public class RuntimeDefault_Should : IDisposable
     {
         private ExampleContext    _db;
         private ITestOutputHelper _output;
@@ -58,7 +58,10 @@ namespace IntelligentData.Tests
             Assert.Equal(instant, item.CreatedInstant);
         }
 
-        
-        
+
+        public void Dispose()
+        {
+            _db?.Dispose();
+        }
     }
 }

@@ -36,11 +36,18 @@ namespace IntelligentData.Tests.Examples
 
         public static readonly string NewName = "Tasmanian Devil";
 
-        public override string TableNamePrefix { get; } = "EX";
+        public override  string TableNamePrefix { get; }
 
         public ExampleContext(DbContextOptions options, IUserInformationProvider currentUserProvider, ILogger logger)
+            : this(options, currentUserProvider, logger, "EX")
+        {
+            
+        }
+        
+        protected ExampleContext(DbContextOptions options, IUserInformationProvider currentUserProvider, ILogger logger, string prefix)
             : base(options, currentUserProvider, logger)
         {
+            TableNamePrefix = prefix;
         }
 
         // for access tests.
@@ -73,6 +80,8 @@ namespace IntelligentData.Tests.Examples
         }
 
         private         AccessLevel _defaultAccessLevel = AccessLevel.ReadOnly;
+
+
         public override AccessLevel DefaultAccessLevel => _defaultAccessLevel;
 
         public void SetDefaultAccessLevel(AccessLevel level)
@@ -101,7 +110,7 @@ namespace IntelligentData.Tests.Examples
             SeedData(() => SaveChanges());
         }
 
-        public static IServiceProvider CreateServiceProvider(IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true)
+        public static IServiceProvider CreateServiceProvider<TContext>(IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true, bool seed = true) where TContext : ExampleContext
         {
             var col = new ServiceCollection();
             
@@ -113,32 +122,46 @@ namespace IntelligentData.Tests.Examples
 
             col.AddSingleton<IUserInformationProvider>(currentUserProvider);
 
-            var options = CreateOptions(withTempTables);
+            var options = CreateOptions<TContext>(withTempTables);
             
-            col.AddSingleton<DbContextOptions<ExampleContext>>(options);
+            col.AddSingleton<DbContextOptions<TContext>>(options);
             
             col.AddSingleton<DbContextOptions>(options);
 
-            using (var preContext = new ExampleContext(options, currentUserProvider, logger))
+            col.AddDbContext<TContext>();
+
+            var sp = col.BuildServiceProvider();
+
+            using (var scope = sp.CreateScope())
             {
-                preContext.Database.EnsureCreated();
+                using (var preContext = scope.ServiceProvider.GetRequiredService<TContext>())
+                {
+                    preContext.Database.EnsureCreated();
+                }
             }
 
-            using (var preContext = new ExampleContext(options, currentUserProvider, logger))
+            if (seed)
             {
-                preContext.Seed();
+                using (var scope = sp.CreateScope())
+                {
+                    using (var preContext = scope.ServiceProvider.GetRequiredService<TContext>())
+                    {
+                        preContext.Seed();
+                    }
+                }
             }
 
-            col.AddDbContext<ExampleContext>();
-
-            return col.BuildServiceProvider();
+            return sp;
         }
+
+        public static IServiceProvider CreateServiceProvider(IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true, bool seed = true)
+            => CreateServiceProvider<ExampleContext>(currentUserProvider, outputHelper, withTempTables, seed);
         
-        private static DbContextOptions<ExampleContext> CreateOptions(bool withTempTables = true)
+        private static DbContextOptions<TContext> CreateOptions<TContext>(bool withTempTables = true) where TContext : ExampleContext
         {
             var defaultConn = new SqliteConnection("DataSource=:memory:");
             defaultConn.Open();
-            var builder = new DbContextOptionsBuilder<ExampleContext>();
+            var builder = new DbContextOptionsBuilder<TContext>();
             builder.UseSqlite(defaultConn);
             if (withTempTables)
             {
@@ -147,32 +170,25 @@ namespace IntelligentData.Tests.Examples
             return builder.Options;
         }
 
-        public static ExampleContext CreateContext(bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true)
-        {
-            var options = CreateOptions(withTempTables);
-            using (var context = new ExampleContext(options, currentUserProvider, new ExampleLogger()))
-            {
-                context.Database.EnsureCreated();
-            }
+        private static DbContextOptions<ExampleContext> CreateOptions(bool withTempTables = true) => CreateOptions<ExampleContext>();
+        
+        public static TContext CreateContext<TContext>(bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true) where TContext : ExampleContext
+            => CreateServiceProvider<TContext>(currentUserProvider, outputHelper, withTempTables, seed).GetRequiredService<TContext>();
 
-            var ret = new ExampleContext(options, currentUserProvider, new ExampleLogger(outputHelper));
-            if (seed) ret.Seed();
-            return ret;
+        public static ExampleContext CreateContext(bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true)
+            => CreateServiceProvider<ExampleContext>(currentUserProvider, outputHelper, withTempTables, seed).GetRequiredService<ExampleContext>();
+
+        public static TContext CreateContext<TContext>(out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true) where TContext : ExampleContext
+        {
+            var sp      = CreateServiceProvider<TContext>(currentUserProvider, outputHelper, withTempTables, seed);
+
+            secondaryContext = sp.CreateScope().ServiceProvider.GetRequiredService<TContext>();
+            return sp.CreateScope().ServiceProvider.GetRequiredService<TContext>();
         }
 
         public static ExampleContext CreateContext(out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true)
-        {
-            var options = CreateOptions(withTempTables);
-            using (var context = new ExampleContext(options, currentUserProvider, new ExampleLogger()))
-            {
-                context.Database.EnsureCreated();
-            }
+            => CreateContext<ExampleContext>(out secondaryContext, seed, currentUserProvider, outputHelper, withTempTables);
 
-            var ret = new ExampleContext(options, currentUserProvider, new ExampleLogger(outputHelper));
-            if (seed) ret.Seed();
-            secondaryContext = new ExampleContext(options, currentUserProvider, new ExampleLogger(outputHelper));
-            return ret;
-        }
 
         #endregion
     }

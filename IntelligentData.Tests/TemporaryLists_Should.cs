@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
-    public class TemporaryLists_Should
+    public class TemporaryLists_Should 
     {
         private readonly ITestOutputHelper _output;
 
@@ -21,7 +21,7 @@ namespace IntelligentData.Tests
         [Fact]
         public void BeCreatedByDefault()
         {
-            var db = ExampleContext.CreateContext(withTempTables: true);
+            using var db = ExampleContext.CreateContext(withTempTables: true);
             Assert.True(db.HasTempList<int>());
             Assert.True(db.HasTempList<long>());
             Assert.True(db.HasTempList<string>());
@@ -43,7 +43,7 @@ namespace IntelligentData.Tests
         [Fact]
         public void NotBeCreatedWhenSkipped()
         {
-            var db = ExampleContext.CreateContext(withTempTables: false);
+            using var db = ExampleContext.CreateContext(withTempTables: false);
             Assert.False(db.HasTempList<int>());
             Assert.False(db.HasTempList<long>());
             Assert.False(db.HasTempList<string>());
@@ -62,7 +62,7 @@ namespace IntelligentData.Tests
             var items = new int[] {1, 3, 5, 7, 9};
             var otherItems = new int[] {2, 4, 6, 8, 10};
             
-            var db = ExampleContext.CreateContext(withTempTables: withTempTables);
+            using var db = ExampleContext.CreateContext(withTempTables: withTempTables);
             Assert.Equal(withTempTables, db.HasTempList<int>());
 
             // have data in before our first test

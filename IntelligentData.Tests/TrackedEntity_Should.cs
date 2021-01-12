@@ -7,7 +7,7 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
-    public class TrackedEntity_Should
+    public class TrackedEntity_Should : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private readonly ExampleContext _db;
@@ -94,6 +94,10 @@ namespace IntelligentData.Tests
             Assert.Equal(mid, item.LastModifiedByID);
             Assert.True(item.LastModifiedAt > ctm);
         }
-        
+
+        public void Dispose()
+        {
+            _db?.Dispose();
+        }
     }
 }

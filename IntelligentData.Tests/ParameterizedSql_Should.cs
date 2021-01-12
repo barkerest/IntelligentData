@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
-    public class ParameterizedSql_Should
+    public class ParameterizedSql_Should : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private readonly ILogger           _logger;
@@ -103,6 +103,11 @@ namespace IntelligentData.Tests
             _output.WriteLine($"Should delete {cnt} records.");
             Assert.Equal(cnt, sql.ExecuteNonQuery());
             Assert.Equal(1, _db.ReadInsertUpdateDeleteEntities.Count());
+        }
+
+        public void Dispose()
+        {
+            _db?.Dispose();
         }
     }
 }

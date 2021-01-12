@@ -8,7 +8,7 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
-    public class VersionedEntity_Should
+    public class VersionedEntity_Should : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private readonly ExampleContext _db;
@@ -80,6 +80,10 @@ namespace IntelligentData.Tests
             _db.Update(item);
             Assert.Throws<DbUpdateConcurrencyException>(() => _db.SaveChanges());
         }
-        
+
+        public void Dispose()
+        {
+            _db?.Dispose();
+        }
     }
 }
