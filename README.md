@@ -149,6 +149,9 @@ Check out the tests for examples of how the various features are supposed to wor
 
 ## Version History
 
+* __1.2.6__ 2021-01-13
+  Fix null reference exception on shadow properties.
+  
 * __1.2.5__ 2021-01-12
   Allow for blank table name prefix (null, empty, or whitespace) to be ignored.
 

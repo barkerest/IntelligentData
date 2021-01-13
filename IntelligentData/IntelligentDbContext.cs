@@ -373,7 +373,7 @@ namespace IntelligentData
                 var xt = modelBuilder.Entity(et);
                 if (xt is null) continue;
 
-                foreach (var property in entityType.GetProperties())
+                foreach (var property in entityType.GetProperties().Where(x => x.PropertyInfo is PropertyInfo))
                 {
                     // Annotate the properties with runtime defaults.
                     if (property.PropertyInfo.GetCustomAttributes(true)
