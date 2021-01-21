@@ -149,6 +149,9 @@ Check out the tests for examples of how the various features are supposed to wor
 
 ## Version History
 
+* __1.2.7__ 2021-01-21
+  Fix temporary list missing parameters.
+
 * __1.2.6__ 2021-01-13
   Fix null reference exception on shadow properties.
   

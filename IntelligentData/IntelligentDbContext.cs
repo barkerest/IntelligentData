@@ -899,7 +899,7 @@ namespace IntelligentData
                 }
                 
                 var fmt = psql.ToFormattableString();
-                var withListId = $"SELECT {listId}, {psql.SqlText.Substring(7)}";
+                var withListId = $"SELECT {listId}, {fmt.Format.Substring(7)}";
                 sql = FormattableStringFactory.Create(withListId, fmt.GetArguments());
             }
             catch (Exception e) when ((e is ArgumentException) || (e is InvalidOperationException))
