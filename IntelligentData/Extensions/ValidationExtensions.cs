@@ -113,7 +113,7 @@ namespace IntelligentData.Extensions
             if (matchingProperties is null) throw new ArgumentNullException(nameof(matchingProperties));
             if (matchingProperties.Length < 1) throw new ArgumentException("At least one matching property must be supplied.");
             if (!context.TryGetDbContext(out var ctx)) throw new ArgumentException("No DB context is available to construct the SQL.");
-            if (!(ctx.Model.FindEntityType(context.ObjectType) is IEntityType entityType)) throw new ArgumentException($"The {context.ObjectType} type is not part of the {ctx.GetType()} model.");
+            if (ctx.Model.FindEntityType(context.ObjectType) is not IEntityType entityType) throw new ArgumentException($"The {context.ObjectType} type is not part of the {ctx.GetType()} model.");
 
             var primaryKey = entityType.FindPrimaryKey();
             var properties = matchingProperties
@@ -131,13 +131,16 @@ namespace IntelligentData.Extensions
                 throw new ArgumentException($"The {context.ObjectType} type does not have a primary key to exclude the current item.");
             }
 
-            var tableName = entityType.GetTableName();
+            var tableName = entityType.GetTableName() 
+                            ?? throw new ArgumentException($"The {context.ObjectType} type does not link to a table in the {ctx.GetType()} model.");
             var knowledge = SqlKnowledge.For(ctx.Database.ProviderName)
                             ?? throw new ArgumentException("No connection available from the DB context.");
 
             var sql  = new StringBuilder();
             var args = new List<Func<object, object>>();
-
+            var storeId = entityType.GetStoreObjectIdentifier()
+                ?? throw new ArgumentException($"Failed to create StoreObjectIdentifier for {context.ObjectType} type in the {ctx.GetType()} model.");
+            
             sql.Append("SELECT COUNT(*) FROM ")
                .Append(knowledge.QuoteObjectName(tableName))
                .Append(" WHERE (");
@@ -151,17 +154,22 @@ namespace IntelligentData.Extensions
                     if (!first) sql.Append(" OR ");
                     first = false;
                     sql.Append('(')
-                       .Append(knowledge.QuoteObjectName(keyProp.GetColumnName()))
+                       .Append(knowledge.QuoteObjectName(keyProp.GetColumnName(storeId)))
                        .Append(" <> @p_")
                        .Append(args.Count)
                        .Append(')');
-                    if (keyProp.PropertyInfo != null)
+                    
+                    if (keyProp.PropertyInfo is not null)
                     {
                         args.Add(x => keyProp.PropertyInfo.GetValue(x));
                     }
-                    else
+                    else if (keyProp.FieldInfo is not null)
                     {
                         args.Add(x => keyProp.FieldInfo.GetValue(x));
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Key property has no property or field accessor: {keyProp}");
                     }
                 }
             }
@@ -171,17 +179,21 @@ namespace IntelligentData.Extensions
                 if (!first) sql.Append(") AND (");
                 first = false;
                 
-                sql.Append(knowledge.QuoteObjectName(prop.GetColumnName()))
+                sql.Append(knowledge.QuoteObjectName(prop.GetColumnName(storeId)))
                    .Append(" = @p_")
                    .Append(args.Count);
 
-                if (prop.PropertyInfo != null)
+                if (prop.PropertyInfo is not null)
                 {
                     args.Add(x => prop.PropertyInfo.GetValue(x));
                 }
-                else
+                else if (prop.FieldInfo is not null)
                 {
                     args.Add(x => prop.FieldInfo.GetValue(x));
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Property has no property or field accessor: {prop}");
                 }
             }
 

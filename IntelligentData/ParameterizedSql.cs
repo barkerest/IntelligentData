@@ -245,11 +245,14 @@ SELECT
             var model = ctx.Model.FindEntityType(typeof(TEntity)) ??
                         throw new InvalidOperationException("Entity missing from context model.");
 
+            var storeId = model.GetStoreObjectIdentifier()
+                          ?? throw new InvalidOperationException("Failed to locate StoreObjectIdentifier from context model.");
+            
             var result = new StringBuilder();
 
             result.Append("WHERE ");
 
-            var keys = model.FindPrimaryKey().Properties.Select(x => _knowledge.QuoteObjectName(x.GetColumnName())).ToArray();
+            var keys = model.FindPrimaryKey().Properties.Select(x => _knowledge.QuoteObjectName(x.GetColumnName(storeId))).ToArray();
             if (keys.Length == 1)
             {
                 result.Append(keys[0]);
@@ -318,9 +321,9 @@ SELECT
             );
         }
 
-        private string ColumnNameFor(IProperty prop)
+        private string ColumnNameFor(IProperty prop, StoreObjectIdentifier storeObjectIdentifier)
         {
-            return _knowledge.QuoteObjectName(prop.GetColumnName());
+            return _knowledge.QuoteObjectName(prop.GetColumnName(storeObjectIdentifier));
         }
 
         /// <summary>
@@ -353,6 +356,9 @@ SELECT
             var entityType = context.Model.FindEntityType(typeof(TEntity)) ??
                              throw new InvalidOperationException("Failed to locate entity type.");
 
+            var storeId = entityType.GetStoreObjectIdentifier()
+                          ?? throw new InvalidOperationException("Failed to locate StoreObjectIdentifier.");
+            
             builder.Append("UPDATE ");
 
             string subAlias;
@@ -395,7 +401,7 @@ SELECT
 
                 builder.Append(subAlias);
 
-                builder.Append(ColumnNameFor(prop)).Append(" = ");
+                builder.Append(ColumnNameFor(prop, storeId)).Append(" = ");
 
                 AddColumnValue(assignment.Expression, builder, paramValues, context, entityType);
             }
@@ -446,11 +452,13 @@ SELECT
         {
             if (expr.Expression is ParameterExpression parameterExpression)
             {
+                var storeId = entityType.GetStoreObjectIdentifier() 
+                              ?? throw new InvalidOperationException("Failed to locate StoreObjectIdentifier.");
                 var prop = entityType.FindProperty(expr.Member.Name) ??
                            throw new InvalidOperationException($"The model does not contain a property named {expr.Member.Name}.");
                 return _knowledge.UpdateSupportsTableAliases
-                           ? $"{_knowledge.QuoteObjectName(_tableAlias)}.{ColumnNameFor(prop)}"
-                           : ColumnNameFor(prop);
+                           ? $"{_knowledge.QuoteObjectName(_tableAlias)}.{ColumnNameFor(prop, storeId)}"
+                           : ColumnNameFor(prop, storeId);
             }
 
             if (!_knowledge.UpdateSupportsTableAliases) throw new InvalidOperationException("Current engine does not support aliased member references.");
@@ -477,8 +485,10 @@ SELECT
                              throw new InvalidOperationException(
                                  $"The {colEx.Member.Name} property is not part of the {colEx.Type} model."
                              );
+            var exStoreId = entity.GetStoreObjectIdentifier()
+                            ?? throw new InvalidOperationException("Failed to locate the StoreObjectIdentifier.");
 
-            return $"{_knowledge.QuoteObjectName(_tableAlias)}.{ColumnNameFor(entityProp)}";
+            return $"{_knowledge.QuoteObjectName(_tableAlias)}.{ColumnNameFor(entityProp, exStoreId)}";
         }
 
         private object ComputeValue(MemberExpression expr)

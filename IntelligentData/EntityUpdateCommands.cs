@@ -45,6 +45,11 @@ namespace IntelligentData
         protected readonly IEntityType EntityType;
 
         /// <summary>
+        /// The store object identifier.
+        /// </summary>
+        protected readonly StoreObjectIdentifier StoreObjectID;
+        
+        /// <summary>
         /// The properties defined for the entity type.
         /// </summary>
         protected readonly IProperty[] EntityProperties;
@@ -80,6 +85,9 @@ namespace IntelligentData
             EntityType = Context.Model.FindEntityType(t)
                          ?? throw new ArgumentException($"The entity type {t} does not exist in the {Context.GetType()} model.");
 
+            StoreObjectID = EntityType.GetStoreObjectIdentifier()
+                            ?? throw new ArgumentException($"The entity type {t} does not have a store object identifier in the {Context.GetType()} model.");
+            
             Key = EntityType.FindPrimaryKey()
                   ?? throw new ArgumentException($"The entity type {t} does not have a primary key in the {Context.GetType()} model.");
 
@@ -515,7 +523,7 @@ namespace IntelligentData
                 }
 
                 first = false;
-                qry.Append(Knowledge.QuoteObjectName(prop.GetColumnName()));
+                qry.Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)));
             }
 
             foreach (var prop in props)
@@ -530,16 +538,20 @@ namespace IntelligentData
                 first = false;
 
                 var param = AddParameterTo(cmd, $"@p_{list.Count}", prop);
-                if (prop.PropertyInfo != null)
+                if (prop.PropertyInfo is not null)
                 {
                     list.Add(param.ParameterName, x => prop.PropertyInfo.GetValue(x));
                 }
-                else
+                else if (prop.FieldInfo is not null)
                 {
                     list.Add(param.ParameterName, x => prop.FieldInfo.GetValue(x));
                 }
+                else
+                {
+                    throw new InvalidOperationException($"Property has no property or field accessor: {prop}");
+                }
 
-                qry.Append(Knowledge.QuoteObjectName(prop.GetColumnName()));
+                qry.Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)));
             }
 
             qry.Append(") VALUES (");
@@ -665,7 +677,7 @@ namespace IntelligentData
                     list.Add(param.ParameterName, x => prop.FieldInfo.GetValue(x));
                 }
 
-                qry.Append(Knowledge.QuoteObjectName(prop.GetColumnName()))
+                qry.Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)))
                    .Append(" = ")
                    .Append(param.ParameterName);
             }
@@ -692,7 +704,7 @@ namespace IntelligentData
                 }
 
                 qry.Append("(")
-                   .Append(Knowledge.QuoteObjectName(prop.GetColumnName()))
+                   .Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)))
                    .Append(" = ")
                    .Append(param.ParameterName)
                    .Append(")");
@@ -704,7 +716,7 @@ namespace IntelligentData
                 list.Add(param.ParameterName, x => Context.Entry(x).Property(prop.Name).OriginalValue);
                 
                 qry.Append(" AND (")
-                   .Append(Knowledge.QuoteObjectName(prop.GetColumnName()))
+                   .Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)))
                    .Append(" = ")
                    .Append(param.ParameterName)
                    .Append(')');
@@ -774,7 +786,7 @@ namespace IntelligentData
                         list.Add(param.ParameterName, x => prop.FieldInfo.GetValue(x));
                     }
 
-                    qry.Append(Knowledge.QuoteObjectName(prop.GetColumnName()))
+                    qry.Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)))
                        .Append(" = ")
                        .Append(param.ParameterName);
                 }
@@ -806,7 +818,7 @@ namespace IntelligentData
                 }
 
                 qry.Append("(")
-                   .Append(Knowledge.QuoteObjectName(prop.GetColumnName()))
+                   .Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)))
                    .Append(" = ")
                    .Append(param.ParameterName)
                    .Append(")");
@@ -818,7 +830,7 @@ namespace IntelligentData
                 list.Add(param.ParameterName, x => Context.Entry(x).Property(prop.Name).OriginalValue);
                 
                 qry.Append(" AND (")
-                   .Append(Knowledge.QuoteObjectName(prop.GetColumnName()))
+                   .Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)))
                    .Append(" = ")
                    .Append(param.ParameterName)
                    .Append(')');
