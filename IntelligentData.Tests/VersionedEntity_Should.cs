@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data;
 using IntelligentData.Interfaces;
 using IntelligentData.Tests.Examples;
 using Microsoft.EntityFrameworkCore;

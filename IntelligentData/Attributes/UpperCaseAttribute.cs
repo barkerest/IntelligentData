@@ -7,7 +7,7 @@ namespace IntelligentData.Attributes
     /// <summary>
     /// Stores strings in upper case.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Property)]
     public sealed class UpperCaseAttribute : Attribute, IStringFormatProvider
     {
         /// <inheritdoc />

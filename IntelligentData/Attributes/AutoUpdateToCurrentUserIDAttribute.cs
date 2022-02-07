@@ -9,6 +9,7 @@ namespace IntelligentData.Attributes
     /// <summary>
     /// Uses the current user ID from the context for the new value when saving.
     /// </summary>
+    [AttributeUsage(AttributeTargets.Property)]
     public class AutoUpdateToCurrentUserIDAttribute : Attribute, IAutoUpdateValueProvider
     {
         internal static readonly Dictionary<Type, Func<IUserInformationProvider, object>> UserIdAccessors

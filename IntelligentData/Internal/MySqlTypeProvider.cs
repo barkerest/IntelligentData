@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace IntelligentData.Internal
+﻿namespace IntelligentData.Internal
 {
     /// <summary>
     /// Conversions for MySQL.

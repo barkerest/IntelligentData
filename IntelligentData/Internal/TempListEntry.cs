@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using IntelligentData.Interfaces;
+﻿using IntelligentData.Interfaces;
 
 namespace IntelligentData.Internal
 {

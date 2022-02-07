@@ -7,7 +7,7 @@ namespace IntelligentData.Attributes
     /// <summary>
     /// Sets the access rights for the attached entity.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
     public sealed class AccessAttribute : Attribute, IEntityAccessProvider
     {
         /// <inheritdoc />

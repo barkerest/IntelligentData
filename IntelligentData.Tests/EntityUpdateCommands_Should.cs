@@ -5,7 +5,6 @@ using IntelligentData.Tests.Examples;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace IntelligentData.Tests
 {

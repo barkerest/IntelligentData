@@ -1,7 +1,7 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations.Design;
 
@@ -12,27 +12,36 @@ namespace IntelligentData.Internal
     /// </summary>
     public sealed class IntelligentDataSnapshotGenerator : CSharpSnapshotGenerator
     {
+        private class AnnotationCodeGeneratorWrapper : IAnnotationCodeGenerator
+        {
+            private readonly IAnnotationCodeGenerator _generator;
+
+            public AnnotationCodeGeneratorWrapper(IAnnotationCodeGenerator generator)
+            {
+                _generator = generator ?? throw new ArgumentNullException(nameof(generator));
+            }
+
+            public IEnumerable<IAnnotation> FilterIgnoredAnnotations(IEnumerable<IAnnotation> annotations)
+            {
+                var ret = _generator.FilterIgnoredAnnotations(annotations).ToList();
+                ret.RemoveAll(x => x.Name.StartsWith("IntelligentData:", StringComparison.OrdinalIgnoreCase));
+                return ret;
+            }
+        }
+
         /// <summary>
         /// Creates the snapshot generator.
         /// </summary>
         /// <param name="dependencies"></param>
-        public IntelligentDataSnapshotGenerator(CSharpSnapshotGeneratorDependencies dependencies) 
-            : base(dependencies)
+        public IntelligentDataSnapshotGenerator(CSharpSnapshotGeneratorDependencies dependencies)
+            : base(
+                new CSharpSnapshotGeneratorDependencies(
+                    dependencies.CSharpHelper,
+                    dependencies.RelationalTypeMappingSource,
+                    new AnnotationCodeGeneratorWrapper(dependencies.AnnotationCodeGenerator)
+                )
+            )
         {
-            
-        }
-
-        /// <inheritdoc />
-        protected override void IgnoreAnnotations(IList<IAnnotation> annotations, params string[] annotationNames)
-        {
-            base.IgnoreAnnotations(annotations, annotationNames);
-
-            foreach (var annotation in annotations
-                                       .Where(x => x.Name.StartsWith("IntelligentData:", StringComparison.OrdinalIgnoreCase))
-                                       .ToList())
-            {
-                annotations.Remove(annotation);
-            }
         }
     }
 }

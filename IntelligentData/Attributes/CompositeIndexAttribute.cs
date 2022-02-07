@@ -48,8 +48,7 @@ namespace IntelligentData.Attributes
         {
             if (!Unique) return ValidationResult.Success;
             if (value is null) return ValidationResult.Success;
-            if (validationContext.ObjectInstance is null) return ValidationResult.Success;
-
+            
             if (validationContext.TryGetDbContext(out var context))
             {
                 var            conn          = context.Database.GetDbConnection();

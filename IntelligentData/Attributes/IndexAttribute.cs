@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
-using System.Text;
 using IntelligentData.Extensions;
 using IntelligentData.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace IntelligentData.Attributes
@@ -14,7 +12,7 @@ namespace IntelligentData.Attributes
     /// <summary>
     /// Defines a single property index.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Property)]
     public class IndexAttribute : ValidationAttribute, IPropertyCustomizer
     {
         /// <summary>
@@ -40,8 +38,7 @@ namespace IntelligentData.Attributes
         {
             if (!Unique) return ValidationResult.Success;
             if (value is null) return ValidationResult.Success;
-            if (validationContext.ObjectInstance is null) return ValidationResult.Success;
-
+            
             if (validationContext.TryGetDbContext(out var context))
             {
                 var                        conn  = context.Database.GetDbConnection();

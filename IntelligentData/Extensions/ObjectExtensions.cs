@@ -21,7 +21,7 @@ namespace IntelligentData.Extensions
         }
 
         internal static object GetNonPublicProperty(this object obj, string propertyName)
-            => obj?.GetType()?.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(obj);
+            => obj?.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(obj);
 
         internal static T GetNonPublicProperty<T>(this object obj, string propertyName)
             => (T) GetNonPublicProperty(obj, propertyName);
@@ -36,7 +36,7 @@ namespace IntelligentData.Extensions
 
             if (prop.GetSetMethod(true) is MethodInfo setter)
             {
-                setter.Invoke(obj, new object[] {value});
+                setter.Invoke(obj, new[] {value});
                 return true;
             }
 

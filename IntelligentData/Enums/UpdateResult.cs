@@ -59,7 +59,7 @@
         /// <param name="result"></param>
         /// <returns>Returns true if the result is successful.</returns>
         public static bool Successful(this UpdateResult result)
-            => result == UpdateResult.Success || result == UpdateResult.SuccessNoChanges;
+            => result is UpdateResult.Success or UpdateResult.SuccessNoChanges;
         
     }
 }

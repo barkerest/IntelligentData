@@ -1,7 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
-using IntelligentData.Attributes;
 using IntelligentData.Tests.Examples;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,7 +35,7 @@ namespace IntelligentData.Tests
 
             var context = new ValidationContext(item, _sp, null) { MemberName = "Name" };
 
-            var attrib = item.GetType().GetProperty("Name")?.GetCustomAttribute<IndexAttribute>()
+            var attrib = item.GetType().GetProperty("Name")?.GetCustomAttribute<IntelligentData.Attributes.IndexAttribute>()
                          ?? throw new InvalidOperationException("Missing attribute.");
             
             Assert.True(attrib.Unique);

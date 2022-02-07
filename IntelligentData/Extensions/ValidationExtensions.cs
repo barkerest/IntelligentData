@@ -7,7 +7,6 @@ using System.Text;
 using IntelligentData.Interfaces;
 using IntelligentData.Internal;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 

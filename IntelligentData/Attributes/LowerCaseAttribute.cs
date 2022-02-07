@@ -7,7 +7,7 @@ namespace IntelligentData.Attributes
     /// <summary>
     /// Stores strings in lower case.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Property)]
     public sealed class LowerCaseAttribute : Attribute, IStringFormatProvider
     {
         /// <inheritdoc />

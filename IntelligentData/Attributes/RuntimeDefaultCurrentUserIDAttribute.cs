@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reflection;
 using IntelligentData.Interfaces;
 using IntelligentData.Internal;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +8,7 @@ namespace IntelligentData.Attributes
     /// <summary>
     /// Uses the current user ID from the context as the default value.
     /// </summary>
+    [AttributeUsage(AttributeTargets.Property)]
     public class RuntimeDefaultCurrentUserIDAttribute : Attribute, IRuntimeDefaultValueProvider
     {
         

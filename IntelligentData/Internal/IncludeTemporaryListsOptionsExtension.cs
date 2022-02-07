@@ -13,8 +13,13 @@ namespace IntelligentData.Internal
             {
             }
 
-            public override long GetServiceProviderHashCode() => 0x706d65545f636e49L;
+            public override int  GetServiceProviderHashCode() => 0x7d54f3e9;
             
+            public override bool ShouldUseSameServiceProvider(DbContextOptionsExtensionInfo other)
+            {
+                return other is InfoClass;
+            }
+
             public override void PopulateDebugInfo(IDictionary<string, string> debugInfo)
             {
                 

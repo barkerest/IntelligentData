@@ -8,6 +8,7 @@ namespace IntelligentData.Attributes
     /// <summary>
     /// Uses the current user name from the context as the default value.
     /// </summary>
+    [AttributeUsage(AttributeTargets.Property)]
     public class RuntimeDefaultCurrentUserNameAttribute : Attribute, IRuntimeDefaultValueProvider
     {
         /// <inheritdoc />

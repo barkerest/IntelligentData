@@ -7,7 +7,7 @@ namespace IntelligentData.Attributes
     /// <summary>
     /// Uses the current date/time for the default value.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Property)]
     public sealed class RuntimeDefaultNowAttribute : Attribute, IRuntimeDefaultValueProvider
     {
         /// <summary>

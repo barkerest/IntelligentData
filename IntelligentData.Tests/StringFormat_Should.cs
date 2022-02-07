@@ -1,7 +1,6 @@
 ﻿using System;
 using IntelligentData.Extensions;
 using IntelligentData.Tests.Examples;
-using Microsoft.EntityFrameworkCore;
 using Xunit;
 using Xunit.Abstractions;
 

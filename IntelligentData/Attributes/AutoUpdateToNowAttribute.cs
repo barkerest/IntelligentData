@@ -7,7 +7,7 @@ namespace IntelligentData.Attributes
     /// <summary>
     /// Uses the current date/time for the new value when saving.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Property)]
     public sealed class AutoUpdateToNowAttribute : Attribute, IAutoUpdateValueProvider
     {
         /// <summary>

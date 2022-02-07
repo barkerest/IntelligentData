@@ -237,7 +237,7 @@ namespace IntelligentData.Extensions
             Func<object, object>  provider
         )
         {
-            ValueProviderDelegate del = (e, v, c) => provider(v);
+            ValueProviderDelegate del = (_, v, _) => provider(v);
             property.SetAnnotation(RuntimeDefaultAnnotation, del);
             return property;
         }
@@ -253,7 +253,7 @@ namespace IntelligentData.Extensions
             Func<object, object> provider
         )
         {
-            ValueProviderDelegate del = (e, v, c) => provider(v);
+            ValueProviderDelegate del = (_, v, _) => provider(v);
             property.Metadata.SetAnnotation(RuntimeDefaultAnnotation, del);
             return property;
         }
@@ -269,7 +269,7 @@ namespace IntelligentData.Extensions
             Func<object>          provider
         )
         {
-            ValueProviderDelegate del = (e, v, c) => provider();
+            ValueProviderDelegate del = (_, _, _) => provider();
             property.SetAnnotation(RuntimeDefaultAnnotation, del);
             return property;
         }
@@ -285,7 +285,7 @@ namespace IntelligentData.Extensions
             Func<object>         provider
         )
         {
-            ValueProviderDelegate del = (e, v, c) => provider();
+            ValueProviderDelegate del = (_, _, _) => provider();
             property.Metadata.SetAnnotation(RuntimeDefaultAnnotation, del);
             return property;
         }
@@ -331,7 +331,7 @@ namespace IntelligentData.Extensions
             Func<object, object>  provider
         )
         {
-            ValueProviderDelegate del = (e, v, c) => provider(v);
+            ValueProviderDelegate del = (_, v, _) => provider(v);
             property.SetAnnotation(AutoUpdateAnnotation, del);
             return property;
         }
@@ -347,7 +347,7 @@ namespace IntelligentData.Extensions
             Func<object, object> provider
         )
         {
-            ValueProviderDelegate del = (e, v, c) => provider(v);
+            ValueProviderDelegate del = (_, v, _) => provider(v);
             property.Metadata.SetAnnotation(AutoUpdateAnnotation, del);
             return property;
         }
@@ -363,7 +363,7 @@ namespace IntelligentData.Extensions
             Func<object>          provider
         )
         {
-            ValueProviderDelegate del = (e, v, c) => provider();
+            ValueProviderDelegate del = (_, _, _) => provider();
             property.SetAnnotation(AutoUpdateAnnotation, del);
             return property;
         }
@@ -379,7 +379,7 @@ namespace IntelligentData.Extensions
             Func<object>         provider
         )
         {
-            ValueProviderDelegate del = (e, v, c) => provider();
+            ValueProviderDelegate del = (_, _, _) => provider();
             property.Metadata.SetAnnotation(AutoUpdateAnnotation, del);
             return property;
         }
@@ -426,7 +426,7 @@ namespace IntelligentData.Extensions
             Func<string, string>  provider
         )
         {
-            StringFormatProviderDelegate del = (e, v, c) => provider(v);
+            StringFormatProviderDelegate del = (_, v, _) => provider(v);
             property.SetAnnotation(StringFormatAnnotation, del);
             return property;
         }
@@ -442,7 +442,7 @@ namespace IntelligentData.Extensions
             Func<string, string> provider
         )
         {
-            StringFormatProviderDelegate del = (e, v, c) => provider(v);
+            StringFormatProviderDelegate del = (_, v, _) => provider(v);
             property.Metadata.SetAnnotation(StringFormatAnnotation, del);
             return property;
         }
@@ -459,7 +459,7 @@ namespace IntelligentData.Extensions
             Func<string>          provider
         )
         {
-            StringFormatProviderDelegate del = (e, v, c) => provider();
+            StringFormatProviderDelegate del = (_, _, _) => provider();
             property.SetAnnotation(StringFormatAnnotation, del);
             return property;
         }
@@ -475,7 +475,7 @@ namespace IntelligentData.Extensions
             Func<string>         provider
         )
         {
-            StringFormatProviderDelegate del = (e, v, c) => provider();
+            StringFormatProviderDelegate del = (_, _, _) => provider();
             property.Metadata.SetAnnotation(StringFormatAnnotation, del);
             return property;
         }
@@ -553,7 +553,7 @@ namespace IntelligentData.Extensions
             if (annotation.Value is ValueProviderDelegate func) return func;
 
             var tTest = typeof(IRuntimeDefaultValueProvider);
-            if (!(annotation.Value is Type tVal)) return null;
+            if (annotation.Value is not Type tVal) return null;
             if (!tTest.IsAssignableFrom(tVal)) return null;
 
             try
@@ -593,7 +593,7 @@ namespace IntelligentData.Extensions
             if (annotation.Value is ValueProviderDelegate func) return func;
 
             var tTest = typeof(IAutoUpdateValueProvider);
-            if (!(annotation.Value is Type tVal)) return null;
+            if (annotation.Value is not Type tVal) return null;
             if (!tTest.IsAssignableFrom(tVal)) return null;
 
             try
@@ -633,7 +633,7 @@ namespace IntelligentData.Extensions
             if (annotation.Value is StringFormatProviderDelegate func) return func;
 
             var tTest = typeof(IStringFormatProvider);
-            if (!(annotation.Value is Type tVal)) return null;
+            if (annotation.Value is not Type tVal) return null;
             if (!tTest.IsAssignableFrom(tVal)) return null;
 
             try
