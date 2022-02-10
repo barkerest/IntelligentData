@@ -16,7 +16,7 @@ namespace IntelligentData.Attributes
         public bool IncludeTime { get; set; } = true;
 
         /// <inheritdoc />
-        public object NewValue(object entity, object currentValue, DbContext context)
+        public object? NewValue(object entity, object? currentValue, DbContext context)
         {
             return IncludeTime ? DateTime.Now : DateTime.Today;
         }

@@ -35,7 +35,7 @@ namespace IntelligentData
         /// <param name="dbContext">The DB context for this entity.</param>
         protected IntelligentEntity(TContext dbContext)
         {
-            DbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+            DbContext = dbContext;
             _info     = DbContext.GetEntityInfoFor(GetType());
             DbContext.InitializeEntity(this);
         }

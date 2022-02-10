@@ -11,7 +11,7 @@ namespace IntelligentData.Attributes
     public sealed class UpperCaseAttribute : Attribute, IStringFormatProvider
     {
         /// <inheritdoc />
-        public string FormatValue(object entity, string currentValue, DbContext context)
+        public string? FormatValue(object entity, string? currentValue, DbContext context)
         {
             return string.IsNullOrEmpty(currentValue) ? "" : currentValue.ToUpper();
         }

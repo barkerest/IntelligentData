@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using IntelligentData.Errors;
 using IntelligentData.Interfaces;
 using IntelligentData.Internal;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace IntelligentData.Extensions
 {
@@ -25,12 +25,9 @@ namespace IntelligentData.Extensions
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        public static bool TryGetDbContext(this ValidationContext validationContext, out DbContext dbContext)
+        public static bool TryGetDbContext(this ValidationContext validationContext, [NotNullWhen(true)] out DbContext? dbContext)
         {
-            if (validationContext is null) throw new ArgumentNullException(nameof(validationContext));
-            if (validationContext.ObjectType is null) throw new ArgumentException("ObjectType cannot be null.");
-
-            Type contextType = null;
+            Type? contextType = null;
 
             dbContext = null;
 
@@ -42,10 +39,10 @@ namespace IntelligentData.Extensions
                 }
             }
 
-            if (contextType != null)
+            if (contextType is not null)
             {
-                dbContext = (DbContext) validationContext.GetRequiredService(contextType);
-                return (dbContext != null);
+                dbContext = validationContext.GetService(contextType) as DbContext;
+                return (dbContext is not null);
             }
 
             if (validationContext.ObjectType.IsGenericType &&
@@ -80,19 +77,19 @@ namespace IntelligentData.Extensions
                         }
                     }
 
-                    if (contextType != null) break;
+                    if (contextType is not null) break;
                 }
             }
 
-            if (contextType != null)
+            if (contextType is not null)
             {
                 lock (EntityDbContextMap)
                 {
                     EntityDbContextMap[validationContext.ObjectType] = contextType;
                 }
 
-                dbContext = (DbContext) validationContext.GetRequiredService(contextType);
-                return (dbContext != null);
+                dbContext = validationContext.GetService(contextType) as DbContext;
+                return (dbContext is not null);
             }
 
             return false;
@@ -109,11 +106,9 @@ namespace IntelligentData.Extensions
         /// <exception cref="ArgumentException"></exception>
         public static ICustomCommand CreateFilteredCountQuery(this ValidationContext context, bool excludeCurrentItem, params string[] matchingProperties)
         {
-            if (context is null) throw new ArgumentNullException(nameof(context));
-            if (matchingProperties is null) throw new ArgumentNullException(nameof(matchingProperties));
             if (matchingProperties.Length < 1) throw new ArgumentException("At least one matching property must be supplied.");
             if (!context.TryGetDbContext(out var ctx)) throw new ArgumentException("No DB context is available to construct the SQL.");
-            if (ctx.Model.FindEntityType(context.ObjectType) is not IEntityType entityType) throw new ArgumentException($"The {context.ObjectType} type is not part of the {ctx.GetType()} model.");
+            if (ctx.Model.FindEntityType(context.ObjectType) is not { } entityType) throw new EntityMissingFromModelException(context.ObjectType);
 
             var primaryKey = entityType.FindPrimaryKey();
             var properties = matchingProperties
@@ -123,23 +118,23 @@ namespace IntelligentData.Extensions
             var mismatch = properties.Where(x => x.Property is null).ToArray();
             if (mismatch.Any())
             {
-                throw new ArgumentException("The following types do not exist in the entity type: " + string.Join(", ", mismatch.Select(x => x.Name)));
+                throw new EntityTypeMissingPropertyException(entityType, mismatch.Select(x => x.Name).ToArray());
             }
 
             if (excludeCurrentItem && primaryKey is null)
             {
-                throw new ArgumentException($"The {context.ObjectType} type does not have a primary key to exclude the current item.");
+                throw new ArgumentException("The entity type must have a primary key defined to exclude the current item.", nameof(excludeCurrentItem));
             }
 
-            var tableName = entityType.GetTableName() 
-                            ?? throw new ArgumentException($"The {context.ObjectType} type does not link to a table in the {ctx.GetType()} model.");
-            var knowledge = SqlKnowledge.For(ctx.Database.ProviderName)
-                            ?? throw new ArgumentException("No connection available from the DB context.");
+            var tableName = entityType.GetTableName()
+                            ?? throw new EntityTypeWithoutTableNameException(entityType);
+            var knowledge = SqlKnowledge.For(ctx.Database.ProviderName ?? throw new UnnamedDatabaseProviderException())
+                            ?? throw new UnknownSqlProviderException(ctx.Database.ProviderName);
 
             var sql  = new StringBuilder();
             var args = new List<Func<object, object>>();
             var storeId = entityType.GetStoreObjectIdentifier()
-                ?? throw new ArgumentException($"Failed to create StoreObjectIdentifier for {context.ObjectType} type in the {ctx.GetType()} model.");
+                          ?? throw new StoreObjectIdentifierNotFoundException(entityType);
             
             sql.Append("SELECT COUNT(*) FROM ")
                .Append(knowledge.QuoteObjectName(tableName))
@@ -149,52 +144,30 @@ namespace IntelligentData.Extensions
 
             if (excludeCurrentItem)
             {
-                foreach (var keyProp in primaryKey.Properties)
+                foreach (var keyProp in primaryKey!.Properties)
                 {
                     if (!first) sql.Append(" OR ");
                     first = false;
                     sql.Append('(')
-                       .Append(knowledge.QuoteObjectName(keyProp.GetColumnName(storeId)))
+                       .Append(knowledge.QuoteObjectName(keyProp.GetColumnName(storeId) ?? throw new PropertyWithoutColumnNameException(keyProp)))
                        .Append(" <> @p_")
                        .Append(args.Count)
                        .Append(')');
                     
-                    if (keyProp.PropertyInfo is not null)
-                    {
-                        args.Add(x => keyProp.PropertyInfo.GetValue(x));
-                    }
-                    else if (keyProp.FieldInfo is not null)
-                    {
-                        args.Add(x => keyProp.FieldInfo.GetValue(x));
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException($"Key property has no property or field accessor: {keyProp}");
-                    }
+                    args.Add(x => keyProp.GetValue(x) ?? DBNull.Value);
                 }
             }
 
-            foreach (var prop in properties.Select(x => x.Property))
+            foreach (var prop in properties.Select(x => x.Property!))
             {
                 if (!first) sql.Append(") AND (");
                 first = false;
                 
-                sql.Append(knowledge.QuoteObjectName(prop.GetColumnName(storeId)))
+                sql.Append(knowledge.QuoteObjectName(prop.GetColumnName(storeId) ?? throw new PropertyWithoutColumnNameException(prop)))
                    .Append(" = @p_")
                    .Append(args.Count);
 
-                if (prop.PropertyInfo is not null)
-                {
-                    args.Add(x => prop.PropertyInfo.GetValue(x));
-                }
-                else if (prop.FieldInfo is not null)
-                {
-                    args.Add(x => prop.FieldInfo.GetValue(x));
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Property has no property or field accessor: {prop}");
-                }
+                args.Add(x => prop.GetValue(x) ?? DBNull.Value);
             }
 
             sql.Append(')');

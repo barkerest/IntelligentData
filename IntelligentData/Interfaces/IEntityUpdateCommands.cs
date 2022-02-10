@@ -1,5 +1,4 @@
 ﻿using System.Data;
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace IntelligentData.Interfaces
@@ -14,19 +13,19 @@ namespace IntelligentData.Interfaces
         /// Sets the properties that will be set on insert.  The default is all properties except keys with auto-generated values.
         /// </summary>
         /// <param name="properties"></param>
-        void SetInsertProperties([NotNull] params MemberInfo[] properties);
+        void SetInsertProperties(params MemberInfo[] properties);
         
         /// <summary>
         /// Sets the properties that will be set on update.  The default is all properties except keys.
         /// </summary>
         /// <param name="properties"></param>
-        void SetUpdateProperties([NotNull] params MemberInfo[] properties);
+        void SetUpdateProperties(params MemberInfo[] properties);
         
         /// <summary>
         /// Sets the properties that will be set on remove.  The default is none which triggers a delete.
         /// </summary>
         /// <param name="properties"></param>
-        void SetRemoveProperties([NotNull] params MemberInfo[] properties);
+        void SetRemoveProperties(params MemberInfo[] properties);
 
         /// <summary>
         /// Inserts the entity into the database.

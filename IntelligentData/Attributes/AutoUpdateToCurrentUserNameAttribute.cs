@@ -12,7 +12,7 @@ namespace IntelligentData.Attributes
     public class AutoUpdateToCurrentUserNameAttribute : Attribute, IAutoUpdateValueProvider
     {
         /// <inheritdoc />
-        public object NewValue(object entity, object currentValue, DbContext context)
+        public object? NewValue(object entity, object? currentValue, DbContext context)
         {
             var provider = (context as IntelligentDbContext)?.CurrentUserProvider ?? Nobody.Instance;
             return provider.GetUserName();

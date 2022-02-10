@@ -17,7 +17,7 @@ namespace IntelligentData.Interfaces
         /// <summary>
         /// Gets the parameter access for the command.
         /// </summary>
-        IReadOnlyList<Func<object,object>> ParameterAccessors { get; }
+        IReadOnlyList<Func<object,object?>> ParameterAccessors { get; }
 
         /// <summary>
         /// Creates a DB command using the SQL statement and the supplied parameter source.

@@ -14,6 +14,6 @@ namespace IntelligentData.Interfaces
         /// <param name="currentValue">The current value of the property.</param>
         /// <param name="context">The context the insertion is occurring within.</param>
         /// <returns>Returns the current value or default value for the property if the current value is not set.</returns>
-        object ValueOrDefault(object entity, object currentValue, DbContext context);
+        object? ValueOrDefault(object entity, object? currentValue, DbContext context);
     }
 }

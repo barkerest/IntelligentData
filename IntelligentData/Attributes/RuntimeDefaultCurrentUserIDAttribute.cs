@@ -11,9 +11,8 @@ namespace IntelligentData.Attributes
     [AttributeUsage(AttributeTargets.Property)]
     public class RuntimeDefaultCurrentUserIDAttribute : Attribute, IRuntimeDefaultValueProvider
     {
-        
         private readonly Func<IUserInformationProvider, object> _getUserId;
-        
+
         public RuntimeDefaultCurrentUserIDAttribute(Type userIdType)
         {
             if (userIdType is null) throw new ArgumentNullException(nameof(userIdType));
@@ -26,24 +25,27 @@ namespace IntelligentData.Attributes
         /// The data type to return for the user ID.
         /// </summary>
         public Type UserIdType { get; }
-        
+
         /// <inheritdoc />
-        public object ValueOrDefault(object entity, object currentValue, DbContext context)
+        public object? ValueOrDefault(object entity, object? currentValue, DbContext context)
         {
             var provider = (context as IntelligentDbContext)?.CurrentUserProvider ?? Nobody.Instance;
 
             if (currentValue is null) return _getUserId(provider);
 
-            if (UserIdType.IsValueType &&
-                Activator.CreateInstance(UserIdType)
-                         .Equals(currentValue))
-                return _getUserId(provider);
+            if (UserIdType.IsValueType)
+            {
+                var defVal = Activator.CreateInstance(UserIdType)!;
+                return defVal.Equals(currentValue) ? _getUserId(provider) : currentValue;
+            }
 
             if (UserIdType == typeof(string) &&
-                "".Equals(currentValue))
-                return _getUserId(provider);
-            
-            return currentValue;
+                currentValue is string s)
+            {
+                return string.IsNullOrWhiteSpace(s) ? _getUserId(provider) : s;
+            }
+
+            return _getUserId(provider);
         }
     }
 }

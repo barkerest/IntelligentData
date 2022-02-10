@@ -19,7 +19,7 @@ namespace IntelligentData.Attributes
         /// The properties in this index.
         /// </summary>
         public string[] Properties { get; }
-        
+
         /// <summary>
         /// Is this a unique index.
         /// </summary>
@@ -38,22 +38,23 @@ namespace IntelligentData.Attributes
             return builder;
         }
 
-        public override bool RequiresValidationContext { get; } = true;
-        
+        public override bool RequiresValidationContext
+            => true;
+
         private static readonly IDictionary<Type, ICustomCommand> Queries
             = new Dictionary<Type, ICustomCommand>();
 
         /// <inheritdoc />
-        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
             if (!Unique) return ValidationResult.Success;
             if (value is null) return ValidationResult.Success;
-            
+
             if (validationContext.TryGetDbContext(out var context))
             {
-                var            conn          = context.Database.GetDbConnection();
-                ICustomCommand customCommand = null;
-                
+                var             conn          = context.Database.GetDbConnection();
+                ICustomCommand? customCommand = null;
+
                 lock (Queries)
                 {
                     if (Queries.ContainsKey(validationContext.ObjectType))
@@ -73,8 +74,7 @@ namespace IntelligentData.Attributes
 
                 if (string.IsNullOrEmpty(customCommand.SqlStatement)) return ValidationResult.Success;
 
-                if (conn.State == ConnectionState.Broken ||
-                    conn.State == ConnectionState.Closed) conn.Open();
+                if (conn.State is ConnectionState.Broken or ConnectionState.Closed) conn.Open();
 
                 var cmd = customCommand.CreateCommand(conn, validationContext.ObjectInstance);
 

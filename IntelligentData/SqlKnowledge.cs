@@ -23,10 +23,10 @@ namespace IntelligentData
         public string ObjectCloseQuote { get; }
 
         /// <inheritdoc />
-        public Func<string, string> EscapeObjectName { get; } = null;
+        public Func<string, string>? EscapeObjectName { get; } = null;
 
         /// <inheritdoc />
-        public Func<string, string> UnescapeObjectName { get; } = null;
+        public Func<string, string>? UnescapeObjectName { get; } = null;
 
         /// <inheritdoc />
         public string ConcatStringBefore { get; }
@@ -78,7 +78,7 @@ namespace IntelligentData
         public string GetValueTypeName(Type type, int maxLength = 0, int precision = 0, int scale = 0)
             => _typeNameProvider.GetValueTypeName(type, maxLength, precision, scale);
 
-        private readonly string _tempTableNamePrefix;
+        private readonly string? _tempTableNamePrefix;
 
         /// <inheritdoc />
         public string CreateTemporaryTableName(string tableName)
@@ -98,7 +98,7 @@ namespace IntelligentData
         public string GetCreateTemporaryTableCommand(string tableName, string body)
             => string.Format(_createTempTableGuard, tableName, body);
         
-        private SqlKnowledge(string name, string provPattern, string connPattern, string open, string close, string insertId, bool deleteAlias, bool updateAlias, bool updateFrom, string concatOp = null, string concatFunc = null, ISqlTypeNameProvider typeNameProvider = null, string tempTableNamePrefix = null, string guardedCreateTable = null, string tempCreateTable = null)
+        private SqlKnowledge(string name, string provPattern, string connPattern, string open, string close, string insertId, bool deleteAlias, bool updateAlias, bool updateFrom, string? concatOp = null, string? concatFunc = null, ISqlTypeNameProvider? typeNameProvider = null, string? tempTableNamePrefix = null, string? guardedCreateTable = null, string? tempCreateTable = null)
         {
             EngineName                 = name;
             _provTypePattern           = new Regex(provPattern, RegexOptions.IgnoreCase);
@@ -126,7 +126,7 @@ namespace IntelligentData
             {
                 ConcatStringBefore = "";
                 ConcatStringAfter  = "";
-                ConcatStringMid    = concatOp;
+                ConcatStringMid    = concatOp ?? "";
             }
             else
             {
@@ -187,7 +187,7 @@ namespace IntelligentData
         /// <param name="providerName"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public static ISqlKnowledge For(string providerName)
+        public static ISqlKnowledge? For(string providerName)
         {
             if (string.IsNullOrEmpty(providerName)) throw new ArgumentNullException(nameof(providerName));
             ISqlKnowledge[] known;
@@ -205,7 +205,7 @@ namespace IntelligentData
         /// <param name="connection"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public static ISqlKnowledge For(IDbConnection connection)
+        public static ISqlKnowledge? For(IDbConnection connection)
         {
             if (connection is null) throw new ArgumentNullException(nameof(connection));
             ISqlKnowledge[] known;

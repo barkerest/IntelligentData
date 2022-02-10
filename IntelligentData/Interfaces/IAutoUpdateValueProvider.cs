@@ -14,6 +14,6 @@ namespace IntelligentData.Interfaces
         /// <param name="currentValue">The current value of the property.</param>
         /// <param name="context">The context the modification is occurring within.</param>
         /// <returns>Returns the new value for the property.</returns>
-        object NewValue(object entity, object currentValue, DbContext context);
+        object? NewValue(object entity, object? currentValue, DbContext context);
     }
 }

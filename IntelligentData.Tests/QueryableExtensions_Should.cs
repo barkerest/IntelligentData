@@ -18,7 +18,7 @@ namespace IntelligentData.Tests
         public QueryableExtensions_Should(ITestOutputHelper output)
         {
             _output = output ?? throw new ArgumentNullException(nameof(output));
-            _db     = ExampleContext.CreateContext(false);
+            _db     = ExampleContext.CreateContext(output, false);
         }
 
         public static IEnumerable<object[]> GetQueries()

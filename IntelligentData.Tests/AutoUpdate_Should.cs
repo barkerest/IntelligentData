@@ -14,7 +14,7 @@ namespace IntelligentData.Tests
         public AutoUpdate_Should(ITestOutputHelper output)
         {
             _output = output ?? throw new ArgumentNullException(nameof(output));
-            _db     = ExampleContext.CreateContext(false);
+            _db     = ExampleContext.CreateContext(output,false);
         }
 
         [Fact]

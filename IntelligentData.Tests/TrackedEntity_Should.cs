@@ -16,7 +16,7 @@ namespace IntelligentData.Tests
         {
             _output = output ?? throw new ArgumentNullException(nameof(output));
             _user = new ExampleUserInformationProvider();
-            _db = ExampleContext.CreateContext(currentUserProvider: _user);
+            _db = ExampleContext.CreateContext(output, currentUserProvider: _user);
         }
 
         [Fact]

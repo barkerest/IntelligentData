@@ -4,13 +4,13 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using IntelligentData.Attributes;
 using IntelligentData.Delegates;
 using IntelligentData.Enums;
+using IntelligentData.Errors;
 using IntelligentData.Extensions;
 using IntelligentData.Interfaces;
 using IntelligentData.Internal;
@@ -34,7 +34,7 @@ namespace IntelligentData
         /// <summary>
         /// A prefix to apply to table names.
         /// </summary>
-        public virtual string TableNamePrefix { get; } = null;
+        public virtual string? TableNamePrefix { get; } = null;
 
         /// <summary>
         /// Constructs the intelligent DB context.
@@ -45,14 +45,14 @@ namespace IntelligentData
         protected IntelligentDbContext(DbContextOptions options, IUserInformationProvider currentUserProvider, ILogger logger)
             : base(options)
         {
-            CurrentUserProvider = currentUserProvider ?? Nobody.Instance;
-            Logger              = logger ?? throw new ArgumentNullException(nameof(logger));
+            CurrentUserProvider = currentUserProvider;
+            Logger              = logger;
             _createTempLists    = options.WithTemporaryLists();
         }
 
         #region Entity Info
 
-        private readonly Dictionary<Type, EntityInfo> _entityInfo = new Dictionary<Type, EntityInfo>();
+        private readonly Dictionary<Type, EntityInfo> _entityInfo = new();
 
         internal EntityInfo GetEntityInfoFor(Type t)
         {
@@ -82,8 +82,8 @@ namespace IntelligentData
         /// </summary>
         public abstract AccessLevel DefaultAccessLevel { get; }
 
-        private readonly Dictionary<Type, AccessLevel> _defaultAccessLevels = new Dictionary<Type, AccessLevel>();
-        private          bool                          _allowSeedData       = false;
+        private readonly Dictionary<Type, AccessLevel> _defaultAccessLevels = new();
+        private          bool                          _allowSeedData;
 
         private AccessLevel DefaultAccessForEntityType(Type entityType)
         {
@@ -123,8 +123,6 @@ namespace IntelligentData
         /// <returns></returns>
         public AccessLevel AccessForEntity(object entity)
         {
-            if (entity is null) return AccessLevel.ReadOnly;
-
             if (_allowSeedData) return AccessLevel.Insert;
 
             if (entity is IEntityAccessProvider e) return e.EntityAccessLevel;
@@ -134,8 +132,6 @@ namespace IntelligentData
 
         private bool IsChangePermitted(EntityEntry entry)
         {
-            if (entry is null) return false;
-
             var permitted = AccessForEntity(entry.Entity);
 
             if ((permitted & AccessLevel.FullAccess) == AccessLevel.FullAccess) return true;
@@ -149,7 +145,7 @@ namespace IntelligentData
             {
                 // non-permitted changes are removed from the ChangeTracker to prevent them from being saved.
 
-                Logger.LogWarning($"Cannot make changes to {entry.Entity.GetType()} entity: {entry.Entity}");
+                Logger.LogWarning($"Cannot make changes to {entry.Entity.GetType()} entity: {entry.Entity} - Not {entry.State}");
                 
                 if (entry.State == EntityState.Added)
                 {
@@ -206,13 +202,13 @@ namespace IntelligentData
                 {
                     var fmt = property.GetStringFormatProvider(this.GetInfrastructure());
                     if (fmt is null) continue;
-                    var val = property.PropertyInfo.GetValue(entity) as string;
+                    var val = property.GetValue(entity) as string;
                     if (string.IsNullOrEmpty(val)) continue;
 
                     var fmtVal = fmt(entity, val, this);
-                    if (val == fmtVal) continue;
+                    if (string.Equals(val, fmtVal, StringComparison.Ordinal)) continue;
 
-                    property.PropertyInfo.SetValue(entity, fmtVal);
+                    property.SetValue(entity, fmtVal);
                     entry.Property(property.Name)
                          .IsModified = true;
                 }
@@ -233,11 +229,11 @@ namespace IntelligentData
                 {
                     var provider = property.GetRuntimeDefaultValueProvider(this.GetInfrastructure());
                     if (provider is null) continue;
-                    var val    = property.PropertyInfo.GetValue(entity);
+                    var val    = property.GetValue(entity);
                     var newVal = provider(entity, val, this);
                     if (newVal == val) continue;
 
-                    property.PropertyInfo.SetValue(entity, newVal);
+                    property.SetValue(entity, newVal);
                     entry.Property(property.Name)
                          .IsModified = true;
                 }
@@ -258,11 +254,11 @@ namespace IntelligentData
                 {
                     var provider = property.GetAutoUpdateValueProvider(this.GetInfrastructure());
                     if (provider is null) continue;
-                    var val    = property.PropertyInfo.GetValue(entity);
+                    var val    = property.GetValue(entity);
                     var newVal = provider(entity, val, this);
                     if (newVal == val) continue;
 
-                    property.PropertyInfo.SetValue(entity, newVal);
+                    property.SetValue(entity, newVal);
                     entry.Property(property.Name)
                          .IsModified = true;
                 }
@@ -310,9 +306,9 @@ namespace IntelligentData
                 // get the changed records for further processing while filtering out the non-permitted changes.
                 var records = ChangeTracker.Entries()
                                            .Where(
-                                               x => x.State == EntityState.Added ||
-                                                    x.State == EntityState.Modified ||
-                                                    x.State == EntityState.Deleted
+                                               x => x.State is EntityState.Added 
+                                                        or EntityState.Modified 
+                                                        or EntityState.Deleted
                                            )
                                            .Where(IsChangePermitted)
                                            .ToList();
@@ -366,18 +362,17 @@ namespace IntelligentData
 
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
-                if (!(entityType.ClrType is Type et)) continue;
+                if (entityType.ClrType is not { } et) continue;
                 if (entityType.IsKeyless) continue;
 
                 var xt = modelBuilder.Entity(et);
-                if (xt is null) continue;
-
-                foreach (var property in entityType.GetProperties().Where(x => x.PropertyInfo is PropertyInfo))
+                
+                foreach (var property in entityType.GetProperties().Where(x => x.PropertyInfo is not null))
                 {
                     // Annotate the properties with runtime defaults.
-                    if (property.PropertyInfo.GetCustomAttributes(true)
+                    if (property.PropertyInfo!.GetCustomAttributes(true)
                                 .OfType<IRuntimeDefaultValueProvider>()
-                                .FirstOrDefault() is IRuntimeDefaultValueProvider runtimeDefaultValueProvider)
+                                .FirstOrDefault() is { } runtimeDefaultValueProvider)
                     {
                         property.HasRuntimeDefault(runtimeDefaultValueProvider);
                     }
@@ -385,7 +380,7 @@ namespace IntelligentData
                     // Annotate the properties with automatically updated values.
                     if (property.PropertyInfo.GetCustomAttributes(true)
                                 .OfType<IAutoUpdateValueProvider>()
-                                .FirstOrDefault() is IAutoUpdateValueProvider autoUpdateValueProvider)
+                                .FirstOrDefault() is { } autoUpdateValueProvider)
                     {
                         property.HasAutoUpdate(autoUpdateValueProvider);
                     }
@@ -393,7 +388,7 @@ namespace IntelligentData
                     // Annotate the properties with default values computed at runtime.
                     if (property.PropertyInfo.GetCustomAttributes(true)
                                 .OfType<IStringFormatProvider>()
-                                .FirstOrDefault() is IStringFormatProvider stringFormatProvider)
+                                .FirstOrDefault() is { } stringFormatProvider)
                     {
                         property.HasStringFormat(stringFormatProvider);
                     }
@@ -460,7 +455,9 @@ namespace IntelligentData
 
                 if (tableNamePrefix != "")
                 {
-                    var name = entityType.GetTableName();
+                    var name = entityType.GetTableName()
+                        ?? throw new EntityTypeWithoutTableNameException(entityType);
+                    
                     if (!name.StartsWith(tableNamePrefix))
                     {
                         xt.ToTable(tableNamePrefix + name);
@@ -570,9 +567,8 @@ namespace IntelligentData
         /// </remarks>
         public void InitializeEntity(object entity)
         {
-            if (entity is null) return;
             var                                         t            = GetType();
-            IReadOnlyList<IntelligentEntityInitializer> initializers = null;
+            IReadOnlyList<IntelligentEntityInitializer>? initializers = null;
             lock (EntityInitializers)
             {
                 if (EntityInitializers.ContainsKey(t))
@@ -594,7 +590,7 @@ namespace IntelligentData
 
         #region Knowledge
 
-        private ISqlKnowledge _knowledge;
+        private ISqlKnowledge? _knowledge;
 
         /// <summary>
         /// Gets the SQL knowledge for this DB context.
@@ -603,8 +599,9 @@ namespace IntelligentData
         {
             get
             {
-                if (_knowledge != null) return _knowledge;
-                _knowledge = SqlKnowledge.For(Database.ProviderName);
+                if (_knowledge is not null) return _knowledge;
+                _knowledge = SqlKnowledge.For(Database.ProviderName ?? throw new UnnamedDatabaseProviderException())
+                             ?? throw new UnknownSqlProviderException(Database.ProviderName);
                 return _knowledge;
             }
         }
@@ -613,7 +610,7 @@ namespace IntelligentData
 
         #region Persistent Connection
 
-        private DbConnection _connection;
+        private DbConnection? _connection;
 
         private void EnsureConnectionIsPersistent()
         {
@@ -622,13 +619,12 @@ namespace IntelligentData
             if (_connection?.State == ConnectionState.Broken)
             {
                 _connection = null;
-                throw new DataException("The connection state is broken.");
+                throw new PersistentConnectionBrokenException();
             }
 
             _connection = Database.GetDbConnection();
 
-            if (_connection.State == ConnectionState.Broken ||
-                _connection.State == ConnectionState.Closed)
+            if (_connection.State is ConnectionState.Broken or ConnectionState.Closed)
             {
                 _connection.Open();
             }
@@ -639,7 +635,7 @@ namespace IntelligentData
         /// </summary>
         /// <returns></returns>
         public bool IsConnectionPersistent()
-            => _connection != null &&
+            => _connection is not null &&
                _connection.State != ConnectionState.Closed &&
                _connection.State != ConnectionState.Broken;
 
@@ -668,8 +664,8 @@ namespace IntelligentData
             return TempTableDefs[t];
         }
 
-        private readonly List<Type>              _tempEnsured = new List<Type>();
-        private readonly IDictionary<Type, bool> _tempInModel = new Dictionary<Type, bool>();
+        private readonly List<Type>              _tempEnsured = new();
+        private readonly Dictionary<Type, bool> _tempInModel = new();
 
         private void EnsureTempListExists(Type t)
         {
@@ -696,7 +692,7 @@ namespace IntelligentData
 
             var tt = TempTable(t);
 
-            _tempInModel[t] = (Model.FindEntityType(tt.EntityType) != null);
+            _tempInModel[t] = (Model.FindEntityType(tt.EntityType) is not null);
 
             return _tempInModel[t];
         }
@@ -718,7 +714,7 @@ namespace IntelligentData
         }
 
         // fallback lists when not using temporary tables.
-        private readonly IDictionary<Type, IDictionary> _contextTempLists = new Dictionary<Type, IDictionary>();
+        private readonly Dictionary<Type, IDictionary> _contextTempLists = new();
 
         private IDictionary<int, List<T>> GetContextTempLists<T>()
         {
@@ -901,7 +897,7 @@ namespace IntelligentData
                 var withListId = $"SELECT {listId}, {fmt.Format.Substring(7)}";
                 sql = FormattableStringFactory.Create(withListId, fmt.GetArguments());
             }
-            catch (Exception e) when ((e is ArgumentException) || (e is InvalidOperationException))
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException)
             {
                 SetTemporaryList(listId, values.ToArray());
                 return;
@@ -913,7 +909,7 @@ namespace IntelligentData
             
             var cmd = tt.GetInsertCommand(Knowledge, listId, -1);
 
-            Database.ExecuteSqlRaw(cmd + sql.Format, sql.GetArguments());
+            Database.ExecuteSqlRaw(cmd + sql.Format, sql.GetArguments().Select(x => x ?? DBNull.Value));
         }
 
         /// <summary>

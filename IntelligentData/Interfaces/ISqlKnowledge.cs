@@ -30,7 +30,7 @@ namespace IntelligentData.Interfaces
         /// The default behavior is to double up closing quotes within the object name.
         /// This function should not wrap the object name in quotes.
         /// </remarks>
-        Func<string,string> EscapeObjectName { get; }
+        Func<string,string>? EscapeObjectName { get; }
 
         /// <summary>
         /// Optional function used to unescape object names.
@@ -39,7 +39,7 @@ namespace IntelligentData.Interfaces
         /// The default behavior is to un-double closing quotes within the object name.
         /// The function should not check for starting and ending quotes.
         /// </remarks>
-        Func<string,string> UnescapeObjectName { get; }
+        Func<string,string>? UnescapeObjectName { get; }
         
         /// <summary>
         /// Code to insert before a string concatenation.

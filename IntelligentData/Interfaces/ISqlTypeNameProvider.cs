@@ -2,6 +2,9 @@
 
 namespace IntelligentData.Interfaces
 {
+    /// <summary>
+    /// A common interface for type name providers (eg - System.Int32 => "INTEGER")
+    /// </summary>
     public interface ISqlTypeNameProvider
     {
         /// <summary>

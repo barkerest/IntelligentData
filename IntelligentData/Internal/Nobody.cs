@@ -7,8 +7,7 @@ namespace IntelligentData.Internal
     /// <summary>
     /// A user information provider for nobody.
     /// </summary>
-    public sealed class Nobody : IUserInformationProvider,
-                                 IUserInformationProviderInt32,
+    public sealed class Nobody : IUserInformationProviderInt32,
                                  IUserInformationProviderInt64,
                                  IUserInformationProviderGuid,
                                  IUserInformationProviderString
@@ -26,7 +25,7 @@ namespace IntelligentData.Internal
         int IUserInformationProviderInt32.GetUserID() => 0;
 
         /// <inheritdoc />
-        string IUserInformationProviderString.GetUserID() => null;
+        string IUserInformationProviderString.GetUserID() => string.Empty;
 
         private Nobody()
         {
@@ -36,6 +35,6 @@ namespace IntelligentData.Internal
         /// <summary>
         /// Gets the instance of Nobody.
         /// </summary>
-        public static readonly Nobody Instance = new Nobody();
+        public static readonly Nobody Instance = new();
     }
 }

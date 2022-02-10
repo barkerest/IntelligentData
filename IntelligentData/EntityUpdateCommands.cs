@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using IntelligentData.Errors;
 using IntelligentData.Extensions;
 using IntelligentData.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +23,7 @@ namespace IntelligentData
     {
         private class PropertyEqual : IEqualityComparer<IProperty>
         {
-            public bool Equals(IProperty x, IProperty y)
+            public bool Equals(IProperty? x, IProperty? y)
                 => string.Equals(x?.Name, y?.Name, StringComparison.Ordinal);
 
             public int GetHashCode(IProperty obj)
@@ -44,6 +45,11 @@ namespace IntelligentData
         /// </summary>
         protected readonly IEntityType EntityType;
 
+        /// <summary>
+        /// The named table or view the entity type references.
+        /// </summary>
+        protected readonly string TableName;
+        
         /// <summary>
         /// The store object identifier.
         /// </summary>
@@ -83,13 +89,16 @@ namespace IntelligentData
             var t = typeof(TEntity);
 
             EntityType = Context.Model.FindEntityType(t)
-                         ?? throw new ArgumentException($"The entity type {t} does not exist in the {Context.GetType()} model.");
+                         ?? throw new EntityMissingFromModelException(t);
+
+            TableName = EntityType.GetTableName()
+                        ?? throw new EntityTypeWithoutTableNameException(EntityType);
 
             StoreObjectID = EntityType.GetStoreObjectIdentifier()
-                            ?? throw new ArgumentException($"The entity type {t} does not have a store object identifier in the {Context.GetType()} model.");
-            
+                            ?? throw new StoreObjectIdentifierNotFoundException(EntityType);
+
             Key = EntityType.FindPrimaryKey()
-                  ?? throw new ArgumentException($"The entity type {t} does not have a primary key in the {Context.GetType()} model.");
+                  ?? throw new EntityTypeWithoutPrimaryKeyException(EntityType);
 
             var stamps = new[] {"timestamp", "rowversion"};
             EntityProperties = EntityType
@@ -97,9 +106,10 @@ namespace IntelligentData
                                .Where(x => !stamps.Contains(x.GetColumnType().ToLower()))
                                .ToArray();
 
-            var conn = Context.Database.ProviderName;
+            var conn = Context.Database.ProviderName ?? throw new UnnamedDatabaseProviderException();
+
             Knowledge = SqlKnowledge.For(conn)
-                        ?? throw new ArgumentException($"The {conn} provider does not have registered SQL knowledge.");
+                        ?? throw new UnknownSqlProviderException(conn);
         }
 
         #region IsProperty
@@ -107,9 +117,6 @@ namespace IntelligentData
         // Determines if the member is the model property.
         private bool IsProperty(MemberInfo member, IProperty property)
         {
-            if (member is null ||
-                property is null) return false;
-
             if (member is PropertyInfo prop)
             {
                 if (property.PropertyInfo is null) return false;
@@ -137,7 +144,7 @@ namespace IntelligentData
             var param = cmd.CreateParameter();
             param.ParameterName = name;
 
-            var type = prop.GetColumnType()?.ToUpper() ?? "";
+            var type = prop.GetColumnType().ToUpper();
 
             if (type.Contains('(')) type = type.Split('(')[0];
 
@@ -230,8 +237,8 @@ namespace IntelligentData
             if (invalid.Any())
             {
                 throw new ArgumentException(
-                    "Only properties and fields are supported, the following are invalid: " +
-                    string.Join(", ", invalid.Select(x => x.Name))
+                    "Only properties and fields are supported, the following are invalid: " 
+                    + invalid.Select(x => x.Name).JoinAnd()
                 );
             }
 
@@ -242,8 +249,8 @@ namespace IntelligentData
             if (invalid.Any())
             {
                 throw new ArgumentException(
-                    "Only entity properties are supported, the following are invalid: " +
-                    string.Join(", ", invalid.Select(x => x.Name))
+                    "Only entity properties are supported, the following are invalid: "
+                    + invalid.Select(x => x.Name).JoinAnd()
                 );
             }
 
@@ -256,8 +263,8 @@ namespace IntelligentData
                 if (invalid.Any())
                 {
                     throw new ArgumentException(
-                        "Key properties cannot be part of the update selection, the following properties are invalid: " +
-                        string.Join(", ", invalid.Select(x => x.Name))
+                        "Key properties cannot be part of the update selection, the following properties are invalid: "
+                        + invalid.Select(x => x.Name).JoinAnd()
                     );
                 }
             }
@@ -271,31 +278,31 @@ namespace IntelligentData
         
         #region InsertProperties
 
-        private IProperty[] _insertProperties;
+        private IProperty[]? _insertProperties;
 
         /// <summary>
         /// Defines a list of properties required on insert.
         /// </summary>
-        protected virtual IEnumerable<IProperty> RequiredInsertProperties { get; } = new IProperty[0];
+        protected virtual IEnumerable<IProperty> RequiredInsertProperties { get; } = Array.Empty<IProperty>();
 
         /// <summary>
         /// Determines if the insert properties have been set.
         /// </summary>
-        protected bool HaveInsertProperties => (_insertProperties != null);
+        protected bool HaveInsertProperties => (_insertProperties is not null);
 
         /// <summary>
         /// Sets the insert properties for this command set if they have not been previously set.
         /// </summary>
         /// <param name="properties"></param>
         /// <exception cref="InvalidOperationException"></exception>
-        protected void SetInsertProperties(IProperty[] properties)
+        protected void SetInsertProperties(IEnumerable<IProperty> properties)
         {
             if (HaveInsertProperties)
             {
                 throw new InvalidOperationException("Insert properties have already been set.");
             }
 
-            _insertProperties = (properties ?? new IProperty[0])
+            _insertProperties = properties
                                 .Union(Key.Properties.Where(x => x.ValueGenerated == ValueGenerated.Never))
                                 .Union(RequiredInsertProperties)
                                 .Distinct(new PropertyEqual())
@@ -316,38 +323,38 @@ namespace IntelligentData
                 SetInsertProperties(GetUpdateProperties());
             }
 
-            return _insertProperties;
+            return _insertProperties!;
         }
         
         #endregion
 
         #region UpdateProperties
         
-        private IProperty[] _updateProperties;
+        private IProperty[]? _updateProperties;
 
         /// <summary>
         /// Determines if the update properties have been set.
         /// </summary>
-        protected bool HaveUpdateProperties => (_updateProperties != null);
+        protected bool HaveUpdateProperties => (_updateProperties is not null);
 
         /// <summary>
         /// Defines a list of properties required for update.
         /// </summary>
-        protected virtual IEnumerable<IProperty> RequiredUpdateProperties { get; } = new IProperty[0];
+        protected virtual IEnumerable<IProperty> RequiredUpdateProperties { get; } = Array.Empty<IProperty>();
 
         /// <summary>
         /// Sets the update properties for this command set if they have not been previously set.
         /// </summary>
         /// <param name="properties"></param>
         /// <exception cref="InvalidOperationException"></exception>
-        protected void SetUpdateProperties(IProperty[] properties)
+        protected void SetUpdateProperties(IEnumerable<IProperty> properties)
         {
             if (HaveUpdateProperties)
             {
                 throw new InvalidOperationException("Update properties have already been set.");
             }
 
-            _updateProperties = (properties ?? new IProperty[0])
+            _updateProperties = properties
                                 .Union(RequiredUpdateProperties)
                                 .Distinct(new PropertyEqual())
                                 .ToArray();
@@ -367,45 +374,45 @@ namespace IntelligentData
                     EntityProperties
                         .Where(
                             x => !x.IsShadowProperty()
-                                 && (x.PropertyInfo != null || x.FieldInfo != null)
+                                 && (x.PropertyInfo is not null || x.FieldInfo is not null)
                                  && Key.Properties.All(y => !string.Equals(y.Name, x.Name, StringComparison.Ordinal))
                         )
                         .ToArray()
                 );
             }
 
-            return _updateProperties;
+            return _updateProperties!;
         }
         
         #endregion
         
         #region RemoveProperties
         
-        private IProperty[] _removeProperties;
+        private IProperty[]? _removeProperties;
 
         /// <summary>
         /// Determines if the remove properties have been set.
         /// </summary>
-        protected bool HaveRemoveProperties => (_removeProperties != null);
+        protected bool HaveRemoveProperties => (_removeProperties is not null);
 
         /// <summary>
         /// Defines a list of properties required for removal (hiding instead of deleting).
         /// </summary>
-        protected virtual IEnumerable<IProperty> RequiredRemoveProperties { get; } = new IProperty[0];
+        protected virtual IEnumerable<IProperty> RequiredRemoveProperties { get; } = Array.Empty<IProperty>();
         
         /// <summary>
         /// Sets the remove properties for this command set if they have not been previously set.
         /// </summary>
         /// <param name="properties"></param>
         /// <exception cref="InvalidOperationException"></exception>
-        protected void SetRemoveProperties(IProperty[] properties)
+        protected void SetRemoveProperties(IEnumerable<IProperty> properties)
         {
             if (HaveRemoveProperties)
             {
                 throw new InvalidOperationException("Remove properties have already been set.");
             }
 
-            _removeProperties = (properties ?? new IProperty[0])
+            _removeProperties = properties
                                 .Union(RequiredRemoveProperties)
                                 .Distinct(new PropertyEqual())
                                 .ToArray();
@@ -421,10 +428,10 @@ namespace IntelligentData
         {
             if (!HaveRemoveProperties)
             {
-                SetRemoveProperties(new IProperty[0]);
+                SetRemoveProperties(Array.Empty<IProperty>());
             }
 
-            return _removeProperties;
+            return _removeProperties!;
         }
 
         #endregion
@@ -449,7 +456,7 @@ namespace IntelligentData
             }
         }
 
-        private object ExecScalar(IDbCommand cmd)
+        private object? ExecScalar(IDbCommand cmd)
         {
             try
             {
@@ -458,7 +465,7 @@ namespace IntelligentData
                 var ret = cmd.ExecuteScalar();
                 sw.Stop();
                 Logger.LogDebug($"Executed DbCommand ({sw.ElapsedMilliseconds:#,##0}ms).\n{cmd.CommandText}");
-                return ret;
+                return ret is DBNull ? null : ret;
             }
             catch
             {
@@ -467,7 +474,7 @@ namespace IntelligentData
             }
         }
 
-        private bool ExecuteCommand(TEntity entity, (IDbCommand, IDictionary<string, Func<TEntity, object>>) cmd)
+        private bool ExecuteCommand(TEntity entity, (IDbCommand, IDictionary<string, Func<TEntity, object?>>) cmd)
         {
             foreach (var param in cmd.Item2)
             {
@@ -485,12 +492,12 @@ namespace IntelligentData
 
         #region Insert
         
-        private IDbCommand                                 _insertCommand;
-        private IDictionary<string, Func<TEntity, object>> _insertParameters;
+        private IDbCommand?                                  _insertCommand;
+        private IDictionary<string, Func<TEntity, object?>>? _insertParameters;
 
-        private (IDbCommand,IDictionary<string, Func<TEntity, object>>) GetInsertCommand(IDbTransaction transaction)
+        private (IDbCommand,IDictionary<string, Func<TEntity, object?>>) GetInsertCommand(IDbTransaction transaction)
         {
-            if (_insertCommand != null)
+            if (_insertCommand is not null && _insertParameters is not null)
             {
                 _insertCommand.Transaction = transaction;
                 return (_insertCommand, _insertParameters);
@@ -499,22 +506,25 @@ namespace IntelligentData
             var cmd   = Context.Database.GetDbConnection().CreateCommand();
             var qry   = new StringBuilder();
             var props = GetInsertProperties();
-            var table = EntityType.GetTableName();
             var first = true;
-            var list  = new Dictionary<string, Func<TEntity, object>>();
+            var list  = new Dictionary<string, Func<TEntity, object?>>();
 
-            qry.Append("INSERT INTO ").Append(Knowledge.QuoteObjectName(table)).Append(" (");
+            qry.Append("INSERT INTO ").Append(Knowledge.QuoteObjectName(TableName)).Append(" (");
 
             foreach (var prop in Key.Properties.Where(x => x.ValueGenerated == ValueGenerated.Never))
             {
                 var param = AddParameterTo(cmd, $"@p_{list.Count}", prop);
-                if (prop.PropertyInfo != null)
+                if (prop.PropertyInfo is not null)
                 {
                     list.Add(param.ParameterName, x => prop.PropertyInfo.GetValue(x));
                 }
-                else
+                else if (prop.FieldInfo is not null)
                 {
                     list.Add(param.ParameterName, x => prop.FieldInfo.GetValue(x));
+                }
+                else
+                {
+                    throw new PropertyWithoutAccessorException(prop);
                 }
 
                 if (!first)
@@ -523,7 +533,9 @@ namespace IntelligentData
                 }
 
                 first = false;
-                qry.Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)));
+                var propName = prop.GetColumnName(StoreObjectID)
+                               ?? throw new PropertyWithoutColumnNameException(prop);
+                qry.Append(Knowledge.QuoteObjectName(propName));
             }
 
             foreach (var prop in props)
@@ -548,10 +560,13 @@ namespace IntelligentData
                 }
                 else
                 {
-                    throw new InvalidOperationException($"Property has no property or field accessor: {prop}");
+                    throw new PropertyWithoutAccessorException(prop);
                 }
 
-                qry.Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)));
+                var propName = prop.GetColumnName(StoreObjectID)
+                               ?? throw new PropertyWithoutColumnNameException(prop);
+                
+                qry.Append(Knowledge.QuoteObjectName(propName));
             }
 
             qry.Append(") VALUES (");
@@ -567,7 +582,7 @@ namespace IntelligentData
                 qry.Append(param.ParameterName);
             }
 
-            qry.Append(")");
+            qry.Append(')');
 
             cmd.CommandText   = qry.ToString();
             _insertCommand    = cmd;
@@ -577,11 +592,11 @@ namespace IntelligentData
             return (_insertCommand, _insertParameters);
         }
         
-        private IDbCommand _lastInsertIdCommand;
+        private IDbCommand? _lastInsertIdCommand;
 
         private IDbCommand GetLastInsertIdCommand(IDbTransaction transaction)
         {
-            if (_lastInsertIdCommand != null)
+            if (_lastInsertIdCommand is not null)
             {
                 _lastInsertIdCommand.Transaction = transaction;
                 return _lastInsertIdCommand;
@@ -616,13 +631,17 @@ namespace IntelligentData
                         lastId = (int) longId;
                     }
                     
-                    if (prop.PropertyInfo != null)
+                    if (prop.PropertyInfo is not null)
                     {
                         prop.PropertyInfo.SetValue(entity, lastId);
                     }
-                    else
+                    else if (prop.FieldInfo is not null)
                     {
                         prop.FieldInfo.SetValue(entity, lastId);
+                    }
+                    else
+                    {
+                        throw new PropertyWithoutAccessorException(prop);
                     }
                 }
             }
@@ -636,12 +655,12 @@ namespace IntelligentData
         
         #region Update
         
-        private IDbCommand _updateCommand;
-        private IDictionary<string, Func<TEntity, object>> _updateParameters;
+        private IDbCommand?                                  _updateCommand;
+        private IDictionary<string, Func<TEntity, object?>>? _updateParameters;
 
-        private (IDbCommand,IDictionary<string, Func<TEntity, object>>) GetUpdateCommand(IDbTransaction transaction)
+        private (IDbCommand,IDictionary<string, Func<TEntity, object?>>) GetUpdateCommand(IDbTransaction transaction)
         {
-            if (_updateCommand != null)
+            if (_updateCommand is not null && _updateParameters is not null)
             {
                 _updateCommand.Transaction = transaction;
                 return (_updateCommand, _updateParameters);
@@ -650,11 +669,10 @@ namespace IntelligentData
             var cmd = Context.Database.GetDbConnection().CreateCommand();
             var qry = new StringBuilder();
             var props = GetUpdateProperties();
-            var table = EntityType.GetTableName();
             var first = true;
-            var list = new Dictionary<string, Func<TEntity, object>>();
+            var list = new Dictionary<string, Func<TEntity, object?>>();
 
-            qry.Append("UPDATE ").Append(Knowledge.QuoteObjectName(table)).Append(" SET ");
+            qry.Append("UPDATE ").Append(Knowledge.QuoteObjectName(TableName)).Append(" SET ");
 
             foreach (var prop in props)
             {
@@ -668,16 +686,23 @@ namespace IntelligentData
                 first = false;
 
                 var param = AddParameterTo(cmd, $"@p_{list.Count}", prop);
-                if (prop.PropertyInfo != null)
+                if (prop.PropertyInfo is not null)
                 {
                     list.Add(param.ParameterName, x => prop.PropertyInfo.GetValue(x));
                 }
-                else
+                else if (prop.FieldInfo is not null)
                 {
                     list.Add(param.ParameterName, x => prop.FieldInfo.GetValue(x));
                 }
+                else
+                {
+                    throw new PropertyWithoutAccessorException(prop);
+                }
 
-                qry.Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)))
+                var propName = prop.GetColumnName(StoreObjectID)
+                               ?? throw new PropertyWithoutColumnNameException(prop);
+                
+                qry.Append(Knowledge.QuoteObjectName(propName))
                    .Append(" = ")
                    .Append(param.ParameterName);
             }
@@ -694,29 +719,39 @@ namespace IntelligentData
                 first = false;
 
                 var param = AddParameterTo(cmd, $"@p_{list.Count}", prop);
-                if (prop.PropertyInfo != null)
+                if (prop.PropertyInfo is not null)
                 {
                     list.Add(param.ParameterName, x => prop.PropertyInfo.GetValue(x));
                 }
-                else
+                else if (prop.FieldInfo is not null)
                 {
                     list.Add(param.ParameterName, x=> prop.FieldInfo.GetValue(x));
                 }
+                else
+                {
+                    throw new PropertyWithoutAccessorException(prop);
+                }
 
-                qry.Append("(")
-                   .Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)))
+                var propName = prop.GetColumnName(StoreObjectID) 
+                               ?? throw new PropertyWithoutColumnNameException(prop);
+
+                qry.Append('(')
+                   .Append(Knowledge.QuoteObjectName(propName))
                    .Append(" = ")
                    .Append(param.ParameterName)
-                   .Append(")");
+                   .Append(')');
             }
 
             foreach (var prop in ConcurrencyTokens)
             {
                 var param = AddParameterTo(cmd, $"@p_{list.Count}", prop);
                 list.Add(param.ParameterName, x => Context.Entry(x).Property(prop.Name).OriginalValue);
+
+                var propName = prop.GetColumnName(StoreObjectID)
+                               ?? throw new PropertyWithoutColumnNameException(prop);
                 
                 qry.Append(" AND (")
-                   .Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)))
+                   .Append(Knowledge.QuoteObjectName(propName))
                    .Append(" = ")
                    .Append(param.ParameterName)
                    .Append(')');
@@ -743,12 +778,12 @@ namespace IntelligentData
 
         #region Remove
         
-        private IDbCommand _removeCommand;
-        private IDictionary<string, Func<TEntity, object>> _removeParameters;
+        private IDbCommand?                                  _removeCommand;
+        private IDictionary<string, Func<TEntity, object?>>? _removeParameters;
         
-        private (IDbCommand, IDictionary<string, Func<TEntity, object>>) GetRemoveCommand(IDbTransaction transaction)
+        private (IDbCommand, IDictionary<string, Func<TEntity, object?>>) GetRemoveCommand(IDbTransaction transaction)
         {
-            if (_removeCommand != null)
+            if (_removeCommand is not null && _removeParameters is not null)
             {
                 _removeCommand.Transaction = transaction;
                 return (_removeCommand, _removeParameters);
@@ -757,13 +792,12 @@ namespace IntelligentData
             var cmd = Context.Database.GetDbConnection().CreateCommand();
             var qry = new StringBuilder();
             var props = GetRemoveProperties();
-            var table = EntityType.GetTableName();
             var first = true;
-            var list = new Dictionary<string, Func<TEntity, object>>();
+            var list = new Dictionary<string, Func<TEntity, object?>>();
 
             if (props.Any())
             {
-                qry.Append("UPDATE ").Append(Knowledge.QuoteObjectName(table)).Append(" SET ");
+                qry.Append("UPDATE ").Append(Knowledge.QuoteObjectName(TableName)).Append(" SET ");
 
                 foreach (var prop in props)
                 {
@@ -777,23 +811,30 @@ namespace IntelligentData
                     first = false;
 
                     var param = AddParameterTo(cmd, $"@p_{list.Count}", prop);
-                    if (prop.PropertyInfo != null)
+                    if (prop.PropertyInfo is not null)
                     {
                         list.Add(param.ParameterName, x => prop.PropertyInfo.GetValue(x));
                     }
-                    else
+                    else if (prop.FieldInfo is not null)
                     {
                         list.Add(param.ParameterName, x => prop.FieldInfo.GetValue(x));
                     }
+                    else
+                    {
+                        throw new PropertyWithoutAccessorException(prop);
+                    }
 
-                    qry.Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)))
+                    var propName = prop.GetColumnName(StoreObjectID)
+                                   ?? throw new PropertyWithoutColumnNameException(prop);
+                    
+                    qry.Append(Knowledge.QuoteObjectName(propName))
                        .Append(" = ")
                        .Append(param.ParameterName);
                 }
             }
             else
             {
-                qry.Append("DELETE FROM ").Append(Knowledge.QuoteObjectName(table));
+                qry.Append("DELETE FROM ").Append(Knowledge.QuoteObjectName(TableName));
             }
 
             qry.Append(" WHERE ");
@@ -808,29 +849,39 @@ namespace IntelligentData
                 first = false;
 
                 var param = AddParameterTo(cmd, $"@p_{list.Count}", prop);
-                if (prop.PropertyInfo != null)
+                if (prop.PropertyInfo is not null)
                 {
                     list.Add(param.ParameterName, x => prop.PropertyInfo.GetValue(x));
                 }
-                else
+                else if (prop.FieldInfo is not null)
                 {
                     list.Add(param.ParameterName, x=> prop.FieldInfo.GetValue(x));
                 }
+                else
+                {
+                    throw new PropertyWithoutAccessorException(prop);
+                }
 
-                qry.Append("(")
-                   .Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)))
+                var propName = prop.GetColumnName(StoreObjectID)
+                               ?? throw new PropertyWithoutColumnNameException(prop);
+                
+                qry.Append('(')
+                   .Append(Knowledge.QuoteObjectName(propName))
                    .Append(" = ")
                    .Append(param.ParameterName)
-                   .Append(")");
+                   .Append(')');
             }
 
             foreach (var prop in ConcurrencyTokens)
             {
                 var param = AddParameterTo(cmd, $"@p_{list.Count}", prop);
                 list.Add(param.ParameterName, x => Context.Entry(x).Property(prop.Name).OriginalValue);
+
+                var propName = prop.GetColumnName(StoreObjectID)
+                               ?? throw new PropertyWithoutColumnNameException(prop);
                 
                 qry.Append(" AND (")
-                   .Append(Knowledge.QuoteObjectName(prop.GetColumnName(StoreObjectID)))
+                   .Append(Knowledge.QuoteObjectName(propName))
                    .Append(" = ")
                    .Append(param.ParameterName)
                    .Append(')');
@@ -860,6 +911,8 @@ namespace IntelligentData
             _lastInsertIdCommand?.Dispose();
             _updateCommand?.Dispose();
             _removeCommand?.Dispose();
+            
+            GC.SuppressFinalize(this);
         }
     }
 }

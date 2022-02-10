@@ -45,7 +45,7 @@ namespace IntelligentData.Tests
         [Fact]
         public void AllowNullPrefix()
         {
-            using var db = ExampleContext.CreateContext<NullExampleContext>(false, outputHelper: _output);
+            using var db = ExampleContext.CreateContext<NullExampleContext>(_output, false);
             Assert.Null(db.TableNamePrefix);
             var et   = db.Model.FindEntityType(typeof(ReadInsertEntity));
             var name = nameof(db.ReadInsertEntities);
@@ -58,7 +58,7 @@ namespace IntelligentData.Tests
         [Fact]
         public void AllowEmptyPrefix()
         {
-            using var db = ExampleContext.CreateContext<EmptyExampleContext>(false, outputHelper: _output);
+            using var db = ExampleContext.CreateContext<EmptyExampleContext>(_output, false);
             Assert.Equal("", db.TableNamePrefix);
             var et   = db.Model.FindEntityType(typeof(ReadInsertEntity));
             var name = nameof(db.ReadInsertEntities);
@@ -71,7 +71,7 @@ namespace IntelligentData.Tests
         [Fact]
         public void AllowBlankPrefix()
         {
-            using var db = ExampleContext.CreateContext<BlankExampleContext>(false, outputHelper: _output);
+            using var db = ExampleContext.CreateContext<BlankExampleContext>(_output, false);
             Assert.Equal("   ", db.TableNamePrefix);
             var et   = db.Model.FindEntityType(typeof(ReadInsertEntity));
             var name = nameof(db.ReadInsertEntities);
@@ -84,7 +84,7 @@ namespace IntelligentData.Tests
         [Fact]
         public void PrefixNameToTables()
         {
-            using var db   = ExampleContext.CreateContext(false, outputHelper: _output);
+            using var db   = ExampleContext.CreateContext(_output, false);
             var et   = db.Model.FindEntityType(typeof(ReadInsertEntity));
             var name = $"{db.TableNamePrefix}_{nameof(db.ReadInsertEntities)}";
             Assert.Equal(name, et.GetTableName());
@@ -96,7 +96,7 @@ namespace IntelligentData.Tests
         [Fact]
         public void NotModifyExplicitlyPrefixedTableNames()
         {
-            using var db   = ExampleContext.CreateContext(false, outputHelper: _output);
+            using var db   = ExampleContext.CreateContext(_output, false);
             var et   = db.Model.FindEntityType(typeof(ReadOnlyEntity));
             var name = "EX__ReadOnly";
             Assert.Equal(name, et.GetTableName());

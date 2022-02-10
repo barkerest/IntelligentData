@@ -35,7 +35,9 @@ namespace IntelligentData.Internal
         /// <param name="dependencies"></param>
         public IntelligentDataSnapshotGenerator(CSharpSnapshotGeneratorDependencies dependencies)
             : base(
+#pragma warning disable EF1001
                 new CSharpSnapshotGeneratorDependencies(
+#pragma warning restore EF1001
                     dependencies.CSharpHelper,
                     dependencies.RelationalTypeMappingSource,
                     new AnnotationCodeGeneratorWrapper(dependencies.AnnotationCodeGenerator)

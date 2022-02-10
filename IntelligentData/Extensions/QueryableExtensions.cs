@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
+using IntelligentData.Errors;
 using IntelligentData.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -46,14 +48,13 @@ namespace IntelligentData.Extensions
         public static bool TryGetSqlString(this IQueryable query, out string value)
         {
             value = "";
-            if (query is null) return false;
-
+            
             try
             {
                 value = query.GetSqlString();
                 return true;
             }
-            catch (InvalidOperationException)
+            catch (Exception e) when (e is IIntelligentDataException)
             {
                 value = "";
                 return false;
@@ -66,17 +67,16 @@ namespace IntelligentData.Extensions
         /// <param name="query"></param>
         /// <param name="command"></param>
         /// <returns></returns>
-        public static bool TryGetCommand(this IQueryable query, out IRelationalCommand command)
+        public static bool TryGetCommand(this IQueryable query, [NotNullWhen(true)]out IRelationalCommand? command)
         {
             command = null;
-            if (query is null) return false;
-
+            
             try
             {
                 command = query.GetCommand();
                 return true;
             }
-            catch (InvalidOperationException)
+            catch (Exception e) when (e is IIntelligentDataException)
             {
                 command = null;
                 return false;
@@ -90,7 +90,7 @@ namespace IntelligentData.Extensions
         /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
         public static ParameterizedSql<TEntity> ToParameterizedSql<TEntity>(this IQueryable<TEntity> query)
-            => new ParameterizedSql<TEntity>(query);
+            => new(query);
 
         /// <summary>
         /// Deletes the records that would be returned by the query.
@@ -99,7 +99,7 @@ namespace IntelligentData.Extensions
         /// <param name="transaction"></param>
         /// <typeparam name="TEntity"></typeparam>
         /// <returns>Returns the number of records deleted.</returns>
-        public static int BulkDelete<TEntity>(this IQueryable<TEntity> query, DbTransaction transaction = null)
+        public static int BulkDelete<TEntity>(this IQueryable<TEntity> query, DbTransaction? transaction = null)
             => new ParameterizedSql<TEntity>(query).ToDelete().ExecuteNonQuery(transaction);
 
         /// <summary>
@@ -110,7 +110,7 @@ namespace IntelligentData.Extensions
         /// <param name="transaction"></param>
         /// <typeparam name="TEntity"></typeparam>
         /// <returns>Returns the number of records updated.</returns>
-        public static int BulkUpdate<TEntity>(this IQueryable<TEntity> query, Expression<Func<TEntity, TEntity>> newValues, DbTransaction transaction = null)
+        public static int BulkUpdate<TEntity>(this IQueryable<TEntity> query, Expression<Func<TEntity, TEntity>> newValues, DbTransaction? transaction = null)
             => new ParameterizedSql<TEntity>(query).ToUpdate(newValues).ExecuteNonQuery(transaction);
         
         

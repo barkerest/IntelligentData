@@ -13,7 +13,7 @@ namespace IntelligentData.Attributes
     public class AutoUpdateToCurrentUserIDAttribute : Attribute, IAutoUpdateValueProvider
     {
         internal static readonly Dictionary<Type, Func<IUserInformationProvider, object>> UserIdAccessors
-            = new Dictionary<Type, Func<IUserInformationProvider, object>>()
+            = new()
             {
                 {
                     typeof(int),
@@ -22,11 +22,11 @@ namespace IntelligentData.Attributes
                 },
                 {
                     typeof(long),
-                    p =>
+                    p => p switch
                     {
-                        if (p is IUserInformationProviderInt64 i64) return i64.GetUserID();
-                        if (p is IUserInformationProviderInt32 i32) return i32.GetUserID();
-                        return 0;
+                        IUserInformationProviderInt64 i64 => i64.GetUserID(),
+                        IUserInformationProviderInt32 i32 => i32.GetUserID(),
+                        _                                 => 0
                     }
                 },
                 {
@@ -36,13 +36,13 @@ namespace IntelligentData.Attributes
                 },
                 {
                     typeof(string),
-                    p =>
+                    p => p switch
                     {
-                        if (p is IUserInformationProviderString s) return s.GetUserID();
-                        if (p is IUserInformationProviderGuid g) return g.GetUserID().ToString();
-                        if (p is IUserInformationProviderInt64 i64) return i64.GetUserID().ToString();
-                        if (p is IUserInformationProviderInt32 i32) return i32.GetUserID().ToString();
-                        return null;
+                        IUserInformationProviderString s  => s.GetUserID(),
+                        IUserInformationProviderGuid g    => g.GetUserID().ToString(),
+                        IUserInformationProviderInt64 i64 => i64.GetUserID().ToString(),
+                        IUserInformationProviderInt32 i32 => i32.GetUserID().ToString(),
+                        _                                 => string.Empty
                     }
                 }
             };
@@ -63,7 +63,7 @@ namespace IntelligentData.Attributes
         public Type UserIdType { get; }
 
         /// <inheritdoc />
-        public object NewValue(object entity, object currentValue, DbContext context)
+        public object? NewValue(object entity, object? currentValue, DbContext context)
         {
             var provider = (context as IntelligentDbContext)?.CurrentUserProvider ?? Nobody.Instance;
             return _getUserId(provider);

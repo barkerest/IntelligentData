@@ -16,16 +16,13 @@ namespace IntelligentData.Attributes
         public bool IncludeTime { get; set; } = true;
         
         /// <inheritdoc />
-        public object ValueOrDefault(object entity, object currentValue, DbContext context)
+        public object? ValueOrDefault(object entity, object? currentValue, DbContext context)
         {
             var def = IncludeTime ? DateTime.Now : DateTime.Today;
             
-            if (currentValue is null) return def;
-            
-            if (currentValue is DateTime dt &&
-                dt == default) return def;
-            
-            return currentValue;
+            if (currentValue is not DateTime dt) return def;
+
+            return dt == default ? def : dt;
         }
     }
 }

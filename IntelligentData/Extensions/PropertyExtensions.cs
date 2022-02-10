@@ -1,5 +1,6 @@
 ﻿using System;
 using IntelligentData.Delegates;
+using IntelligentData.Errors;
 using IntelligentData.Interfaces;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -75,7 +76,7 @@ namespace IntelligentData.Extensions
             property.Metadata.SetAnnotation(AutoUpdateAnnotation, provider);
             return property;
         }
-        
+
         /// <summary>
         /// Adds a string format annotation to the property.
         /// </summary>
@@ -105,7 +106,7 @@ namespace IntelligentData.Extensions
             property.Metadata.SetAnnotation(StringFormatAnnotation, provider);
             return property;
         }
-        
+
         /// <summary>
         /// Adds a runtime default value annotation to the property.
         /// </summary>
@@ -135,7 +136,7 @@ namespace IntelligentData.Extensions
             property.Metadata.SetAnnotation(RuntimeDefaultAnnotation, typeof(TProvider));
             return property;
         }
-        
+
         /// <summary>
         /// Adds an auto-update value annotation to the property.
         /// </summary>
@@ -165,7 +166,7 @@ namespace IntelligentData.Extensions
             property.Metadata.SetAnnotation(AutoUpdateAnnotation, typeof(TProvider));
             return property;
         }
-        
+
         /// <summary>
         /// Adds a string format annotation to the property.
         /// </summary>
@@ -195,7 +196,7 @@ namespace IntelligentData.Extensions
             property.Metadata.SetAnnotation(StringFormatAnnotation, typeof(TProvider));
             return property;
         }
-        
+
         /// <summary>
         /// Adds a runtime default value annotation to the property.
         /// </summary>
@@ -233,12 +234,12 @@ namespace IntelligentData.Extensions
         /// <param name="provider"></param>
         /// <returns></returns>
         public static IMutableProperty HasRuntimeDefault(
-            this IMutableProperty property,
-            Func<object, object>  provider
+            this IMutableProperty  property,
+            Func<object?, object?> provider
         )
         {
-            ValueProviderDelegate del = (_, v, _) => provider(v);
-            property.SetAnnotation(RuntimeDefaultAnnotation, del);
+            ValueProviderDelegate valueProvider = (_, v, _) => provider(v);
+            property.SetAnnotation(RuntimeDefaultAnnotation, valueProvider);
             return property;
         }
 
@@ -249,15 +250,15 @@ namespace IntelligentData.Extensions
         /// <param name="provider"></param>
         /// <returns></returns>
         public static PropertyBuilder HasRuntimeDefault(
-            this PropertyBuilder property,
-            Func<object, object> provider
+            this PropertyBuilder   property,
+            Func<object?, object?> provider
         )
         {
-            ValueProviderDelegate del = (_, v, _) => provider(v);
-            property.Metadata.SetAnnotation(RuntimeDefaultAnnotation, del);
+            ValueProviderDelegate valueProvider = (_, v, _) => provider(v);
+            property.Metadata.SetAnnotation(RuntimeDefaultAnnotation, valueProvider);
             return property;
         }
-        
+
         /// <summary>
         /// Adds a runtime default value annotation to the property.
         /// </summary>
@@ -266,11 +267,11 @@ namespace IntelligentData.Extensions
         /// <returns></returns>
         public static IMutableProperty HasRuntimeDefault(
             this IMutableProperty property,
-            Func<object>          provider
+            Func<object?>         provider
         )
         {
-            ValueProviderDelegate del = (_, _, _) => provider();
-            property.SetAnnotation(RuntimeDefaultAnnotation, del);
+            ValueProviderDelegate valueProvider = (_, _, _) => provider();
+            property.SetAnnotation(RuntimeDefaultAnnotation, valueProvider);
             return property;
         }
 
@@ -282,14 +283,14 @@ namespace IntelligentData.Extensions
         /// <returns></returns>
         public static PropertyBuilder HasRuntimeDefault(
             this PropertyBuilder property,
-            Func<object>         provider
+            Func<object?>        provider
         )
         {
-            ValueProviderDelegate del = (_, _, _) => provider();
-            property.Metadata.SetAnnotation(RuntimeDefaultAnnotation, del);
+            ValueProviderDelegate valueProvider = (_, _, _) => provider();
+            property.Metadata.SetAnnotation(RuntimeDefaultAnnotation, valueProvider);
             return property;
         }
-        
+
         /// <summary>
         /// Adds an auto-update value annotation to the property.
         /// </summary>
@@ -327,12 +328,12 @@ namespace IntelligentData.Extensions
         /// <param name="provider"></param>
         /// <returns></returns>
         public static IMutableProperty HasAutoUpdate(
-            this IMutableProperty property,
-            Func<object, object>  provider
+            this IMutableProperty  property,
+            Func<object?, object?> provider
         )
         {
-            ValueProviderDelegate del = (_, v, _) => provider(v);
-            property.SetAnnotation(AutoUpdateAnnotation, del);
+            ValueProviderDelegate valueProvider = (_, v, _) => provider(v);
+            property.SetAnnotation(AutoUpdateAnnotation, valueProvider);
             return property;
         }
 
@@ -343,15 +344,15 @@ namespace IntelligentData.Extensions
         /// <param name="provider"></param>
         /// <returns></returns>
         public static PropertyBuilder HasAutoUpdate(
-            this PropertyBuilder property,
-            Func<object, object> provider
+            this PropertyBuilder   property,
+            Func<object?, object?> provider
         )
         {
-            ValueProviderDelegate del = (_, v, _) => provider(v);
-            property.Metadata.SetAnnotation(AutoUpdateAnnotation, del);
+            ValueProviderDelegate valueProvider = (_, v, _) => provider(v);
+            property.Metadata.SetAnnotation(AutoUpdateAnnotation, valueProvider);
             return property;
         }
-        
+
         /// <summary>
         /// Adds an auto-update value annotation to the property.
         /// </summary>
@@ -360,11 +361,11 @@ namespace IntelligentData.Extensions
         /// <returns></returns>
         public static IMutableProperty HasAutoUpdate(
             this IMutableProperty property,
-            Func<object>          provider
+            Func<object?>         provider
         )
         {
-            ValueProviderDelegate del = (_, _, _) => provider();
-            property.SetAnnotation(AutoUpdateAnnotation, del);
+            ValueProviderDelegate valueProvider = (_, _, _) => provider();
+            property.SetAnnotation(AutoUpdateAnnotation, valueProvider);
             return property;
         }
 
@@ -376,14 +377,14 @@ namespace IntelligentData.Extensions
         /// <returns></returns>
         public static PropertyBuilder HasAutoUpdate(
             this PropertyBuilder property,
-            Func<object>         provider
+            Func<object?>        provider
         )
         {
-            ValueProviderDelegate del = (_, _, _) => provider();
-            property.Metadata.SetAnnotation(AutoUpdateAnnotation, del);
+            ValueProviderDelegate valueProvider = (_, _, _) => provider();
+            property.Metadata.SetAnnotation(AutoUpdateAnnotation, valueProvider);
             return property;
         }
-        
+
         /// <summary>
         /// Adds a string format annotation to the property.
         /// </summary>
@@ -422,12 +423,12 @@ namespace IntelligentData.Extensions
         /// <param name="provider"></param>
         /// <returns></returns>
         public static IMutableProperty HasStringFormat(
-            this IMutableProperty property,
-            Func<string, string>  provider
+            this IMutableProperty  property,
+            Func<string?, string?> provider
         )
         {
-            StringFormatProviderDelegate del = (_, v, _) => provider(v);
-            property.SetAnnotation(StringFormatAnnotation, del);
+            StringFormatProviderDelegate formatProvider = (_, v, _) => provider(v);
+            property.SetAnnotation(StringFormatAnnotation, formatProvider);
             return property;
         }
 
@@ -438,12 +439,12 @@ namespace IntelligentData.Extensions
         /// <param name="provider"></param>
         /// <returns></returns>
         public static PropertyBuilder HasStringFormat(
-            this PropertyBuilder property,
-            Func<string, string> provider
+            this PropertyBuilder   property,
+            Func<string?, string?> provider
         )
         {
-            StringFormatProviderDelegate del = (_, v, _) => provider(v);
-            property.Metadata.SetAnnotation(StringFormatAnnotation, del);
+            StringFormatProviderDelegate formatProvider = (_, v, _) => provider(v);
+            property.Metadata.SetAnnotation(StringFormatAnnotation, formatProvider);
             return property;
         }
 
@@ -456,11 +457,11 @@ namespace IntelligentData.Extensions
         /// <returns></returns>
         public static IMutableProperty HasStringFormat(
             this IMutableProperty property,
-            Func<string>          provider
+            Func<string?>         provider
         )
         {
-            StringFormatProviderDelegate del = (_, _, _) => provider();
-            property.SetAnnotation(StringFormatAnnotation, del);
+            StringFormatProviderDelegate formatProvider = (_, _, _) => provider();
+            property.SetAnnotation(StringFormatAnnotation, formatProvider);
             return property;
         }
 
@@ -472,11 +473,11 @@ namespace IntelligentData.Extensions
         /// <returns></returns>
         public static PropertyBuilder HasStringFormat(
             this PropertyBuilder property,
-            Func<string>         provider
+            Func<string?>        provider
         )
         {
-            StringFormatProviderDelegate del = (_, _, _) => provider();
-            property.Metadata.SetAnnotation(StringFormatAnnotation, del);
+            StringFormatProviderDelegate formatProvider = (_, _, _) => provider();
+            property.Metadata.SetAnnotation(StringFormatAnnotation, formatProvider);
             return property;
         }
 
@@ -540,7 +541,7 @@ namespace IntelligentData.Extensions
         /// <param name="property">The property.</param>
         /// <param name="serviceProvider">A service provider used to instantiate typed value providers.</param>
         /// <returns>Returns a value provider delegate or null.</returns>
-        public static ValueProviderDelegate GetRuntimeDefaultValueProvider(
+        public static ValueProviderDelegate? GetRuntimeDefaultValueProvider(
             this IProperty   property,
             IServiceProvider serviceProvider
         )
@@ -558,17 +559,14 @@ namespace IntelligentData.Extensions
 
             try
             {
-                var objInstance = (IRuntimeDefaultValueProvider) ActivatorUtilities.CreateInstance(
+                var objInstance = (IRuntimeDefaultValueProvider)ActivatorUtilities.CreateInstance(
                     serviceProvider,
                     tVal
                 );
 
                 return objInstance.ValueOrDefault;
             }
-            catch (Exception ex) when (
-                (ex is InvalidCastException) ||
-                (ex is InvalidOperationException)
-            )
+            catch (Exception ex) when (ex is InvalidCastException or InvalidOperationException)
             {
                 return null;
             }
@@ -580,7 +578,7 @@ namespace IntelligentData.Extensions
         /// <param name="property">The property.</param>
         /// <param name="serviceProvider">A service provider used to instantiate typed value providers.</param>
         /// <returns>Returns a value provider delegate or null.</returns>
-        public static ValueProviderDelegate GetAutoUpdateValueProvider(
+        public static ValueProviderDelegate? GetAutoUpdateValueProvider(
             this IProperty   property,
             IServiceProvider serviceProvider
         )
@@ -598,17 +596,14 @@ namespace IntelligentData.Extensions
 
             try
             {
-                var objInstance = (IAutoUpdateValueProvider) ActivatorUtilities.CreateInstance(
+                var objInstance = (IAutoUpdateValueProvider)ActivatorUtilities.CreateInstance(
                     serviceProvider,
                     tVal
                 );
 
                 return objInstance.NewValue;
             }
-            catch (Exception ex) when (
-                (ex is InvalidCastException) ||
-                (ex is InvalidOperationException)
-            )
+            catch (Exception ex) when (ex is InvalidCastException or InvalidOperationException)
             {
                 return null;
             }
@@ -620,7 +615,7 @@ namespace IntelligentData.Extensions
         /// <param name="property">The property.</param>
         /// <param name="serviceProvider">A service provider used to instantiate typed value providers.</param>
         /// <returns>Returns a value provider delegate or null.</returns>
-        public static StringFormatProviderDelegate GetStringFormatProvider(
+        public static StringFormatProviderDelegate? GetStringFormatProvider(
             this IProperty   property,
             IServiceProvider serviceProvider
         )
@@ -638,7 +633,7 @@ namespace IntelligentData.Extensions
 
             try
             {
-                var objInstance = (IStringFormatProvider) ActivatorUtilities.CreateInstance(
+                var objInstance = (IStringFormatProvider)ActivatorUtilities.CreateInstance(
                     serviceProvider,
                     tVal
                 );
@@ -652,6 +647,64 @@ namespace IntelligentData.Extensions
             {
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Gets the value of the property from the supplied entity.
+        /// </summary>
+        /// <param name="property"></param>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        /// <exception cref="PropertyWithoutAccessorException"></exception>
+        public static object? GetValue(this IProperty property, object entity)
+        {
+            if (property.PropertyInfo is not null && property.PropertyInfo.CanRead)
+                return property.PropertyInfo.GetValue(entity);
+            
+            if (property.FieldInfo is not null)
+                return property.FieldInfo.GetValue(entity);
+            
+            throw new PropertyWithoutAccessorException(property);
+        }
+
+        /// <summary>
+        /// Gets the value type of the property.
+        /// </summary>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        /// <exception cref="PropertyWithoutAccessorException"></exception>
+        public static Type GetValueType(this IProperty property)
+        {
+            if (property.PropertyInfo is not null && property.PropertyInfo.CanRead) return property.PropertyInfo.PropertyType;
+
+            if (property.FieldInfo is not null) return property.FieldInfo.FieldType;
+
+            throw new PropertyWithoutAccessorException(property);
+        }
+
+        /// <summary>
+        /// Sets the value of the property in the supplied entity.
+        /// </summary>
+        /// <param name="property"></param>
+        /// <param name="entity"></param>
+        /// <param name="value"></param>
+        /// <exception cref="PropertyWithoutAccessorException"></exception>
+        public static void SetValue(this IProperty property, object entity, object? value)
+        {
+            if (property.PropertyInfo is not null &&
+                property.PropertyInfo.CanWrite)
+            {
+                property.PropertyInfo.SetValue(entity, value);
+                return;
+            }
+            
+            if (property.FieldInfo is not null)
+            {
+                property.FieldInfo.SetValue(entity, value);
+                return;                
+            }
+
+            throw new PropertyWithoutAccessorException(property, true);
         }
     }
 }

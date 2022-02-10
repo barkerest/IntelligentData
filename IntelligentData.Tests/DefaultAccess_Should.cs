@@ -14,7 +14,7 @@ namespace IntelligentData.Tests
         public DefaultAccess_Should(ITestOutputHelper output)
         {
             _output = output ?? throw new ArgumentNullException(nameof(output));
-            _db     = ExampleContext.CreateContext();
+            _db     = ExampleContext.CreateContext(output);
         }
 
         [Theory]

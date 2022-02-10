@@ -23,11 +23,12 @@ namespace IntelligentData.Extensions
             {
                 var opt = new DbContextOptions<T>(
                     builder.Options
-                           .Extensions.Where(x => !(x is IncludeTemporaryListsOptionsExtension))
+                           .Extensions.Where(x => x is not IncludeTemporaryListsOptionsExtension)
                            .ToDictionary(p => p.GetType(), p => p)
                 );
                 return new DbContextOptionsBuilder<T>(opt);
             }
+
             return builder;
         }
 
@@ -55,14 +56,15 @@ namespace IntelligentData.Extensions
             {
                 var opt = new DbContextOptions<DbContext>(
                     builder.Options
-                           .Extensions.Where(x => !(x is IncludeTemporaryListsOptionsExtension))
+                           .Extensions.Where(x => x is not IncludeTemporaryListsOptionsExtension)
                            .ToDictionary(p => p.GetType(), p => p)
                 );
                 return new DbContextOptionsBuilder<DbContext>(opt);
             }
+
             return builder;
         }
-        
+
         /// <summary>
         /// Instructs the IntelligentDbContext to add the temporary lists to the model.
         /// </summary>
@@ -73,8 +75,7 @@ namespace IntelligentData.Extensions
             ((IDbContextOptionsBuilderInfrastructure)builder).AddOrUpdateExtension(new IncludeTemporaryListsOptionsExtension());
             return builder;
         }
-
-
+        
         /// <summary>
         /// Determines if the IntelligentDbContext should add the temporary lists to the model.
         /// </summary>
@@ -89,8 +90,6 @@ namespace IntelligentData.Extensions
         /// <param name="options"></param>
         /// <returns></returns>
         public static bool WithoutTemporaryLists(this DbContextOptions options)
-            => !options.WithTemporaryLists();
-
-
+            => options.Extensions.All(x => x is not IncludeTemporaryListsOptionsExtension);
     }
 }

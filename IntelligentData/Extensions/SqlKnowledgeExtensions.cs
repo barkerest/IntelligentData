@@ -18,11 +18,10 @@ namespace IntelligentData.Extensions
         /// <returns></returns>
         public static string QuoteObjectName(this ISqlKnowledge knowledge, string objectName)
         {
-            if (knowledge is null) return null;
             if (string.IsNullOrEmpty(objectName)) return "";
-            
+
             StringBuilder ret;
-            if (knowledge.EscapeObjectName != null)
+            if (knowledge.EscapeObjectName is not null)
             {
                 ret = new StringBuilder(knowledge.EscapeObjectName(objectName));
             }
@@ -37,7 +36,7 @@ namespace IntelligentData.Extensions
 
             ret.Insert(0, knowledge.ObjectOpenQuote);
             ret.Append(knowledge.ObjectCloseQuote);
-            
+
             return ret.ToString();
         }
 
@@ -57,7 +56,7 @@ namespace IntelligentData.Extensions
                 objectName = objectName.Substring(knowledge.ObjectOpenQuote.Length, objectName.Length - quoteLen);
             }
 
-            if (knowledge.UnescapeObjectName != null)
+            if (knowledge.UnescapeObjectName is not null)
             {
                 return knowledge.UnescapeObjectName(objectName);
             }
@@ -84,7 +83,7 @@ namespace IntelligentData.Extensions
             var ret = new StringBuilder();
 
             ret.Append(values[0]);
-            
+
             for (var i = 1; i < values.Length; i++)
             {
                 if (string.IsNullOrEmpty(knowledge.ConcatStringBefore))
@@ -95,7 +94,7 @@ namespace IntelligentData.Extensions
                 {
                     ret.Insert(0, knowledge.ConcatStringBefore);
                 }
-                
+
                 if (knowledge.ConcatStringMid == ",")
                 {
                     ret.Append(", ");
@@ -106,7 +105,7 @@ namespace IntelligentData.Extensions
                 }
 
                 ret.Append(values[i]);
-                
+
                 if (string.IsNullOrEmpty(knowledge.ConcatStringBefore))
                 {
                     ret.Append(')');
@@ -119,8 +118,5 @@ namespace IntelligentData.Extensions
 
             return ret.ToString();
         }
-        
-        
-        
     }
 }

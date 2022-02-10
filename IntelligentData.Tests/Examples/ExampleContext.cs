@@ -109,14 +109,16 @@ namespace IntelligentData.Tests.Examples
             SeedData(() => SaveChanges());
         }
 
-        public static IServiceProvider CreateServiceProvider<TContext>(IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true, bool seed = true) where TContext : ExampleContext
+        public static IServiceProvider CreateServiceProvider<TContext>(ITestOutputHelper outputHelper, IUserInformationProvider currentUserProvider = null, bool withTempTables = true, bool seed = true) where TContext : ExampleContext
         {
             var col = new ServiceCollection();
             
-            var logger = new ExampleLogger(outputHelper);
+            var logger = new TestOutputLogger(outputHelper);
             
             col.AddSingleton<ILogger>(logger);
-            
+            col.AddSingleton<ILoggerProvider>(logger);
+            col.AddSingleton<ILoggerFactory>(logger);
+
             if (currentUserProvider is null) currentUserProvider = new ExampleUserInformationProvider() {CurrentUser = ExampleUserInformationProvider.Users.Maximillian};
 
             col.AddSingleton<IUserInformationProvider>(currentUserProvider);
@@ -153,8 +155,8 @@ namespace IntelligentData.Tests.Examples
             return sp;
         }
 
-        public static IServiceProvider CreateServiceProvider(IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true, bool seed = true)
-            => CreateServiceProvider<ExampleContext>(currentUserProvider, outputHelper, withTempTables, seed);
+        public static IServiceProvider CreateServiceProvider(ITestOutputHelper outputHelper, IUserInformationProvider currentUserProvider = null,  bool withTempTables = true, bool seed = true)
+            => CreateServiceProvider<ExampleContext>(outputHelper, currentUserProvider, withTempTables, seed);
         
         private static DbContextOptions<TContext> CreateOptions<TContext>(bool withTempTables = true) where TContext : ExampleContext
         {
@@ -171,22 +173,22 @@ namespace IntelligentData.Tests.Examples
 
         private static DbContextOptions<ExampleContext> CreateOptions(bool withTempTables = true) => CreateOptions<ExampleContext>();
         
-        public static TContext CreateContext<TContext>(bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true) where TContext : ExampleContext
-            => CreateServiceProvider<TContext>(currentUserProvider, outputHelper, withTempTables, seed).GetRequiredService<TContext>();
+        public static TContext CreateContext<TContext>(ITestOutputHelper outputHelper, bool seed = false, IUserInformationProvider currentUserProvider = null, bool withTempTables = true) where TContext : ExampleContext
+            => CreateServiceProvider<TContext>(outputHelper, currentUserProvider, withTempTables, seed).GetRequiredService<TContext>();
 
-        public static ExampleContext CreateContext(bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true)
-            => CreateServiceProvider<ExampleContext>(currentUserProvider, outputHelper, withTempTables, seed).GetRequiredService<ExampleContext>();
+        public static ExampleContext CreateContext(ITestOutputHelper outputHelper, bool seed = false, IUserInformationProvider currentUserProvider = null, bool withTempTables = true)
+            => CreateServiceProvider<ExampleContext>(outputHelper, currentUserProvider, withTempTables, seed).GetRequiredService<ExampleContext>();
 
-        public static TContext CreateContext<TContext>(out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true) where TContext : ExampleContext
+        public static TContext CreateContext<TContext>(ITestOutputHelper outputHelper, out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider currentUserProvider = null, bool withTempTables = true) where TContext : ExampleContext
         {
-            var sp      = CreateServiceProvider<TContext>(currentUserProvider, outputHelper, withTempTables, seed);
+            var sp      = CreateServiceProvider<TContext>(outputHelper, currentUserProvider,withTempTables, seed);
 
             secondaryContext = sp.CreateScope().ServiceProvider.GetRequiredService<TContext>();
             return sp.CreateScope().ServiceProvider.GetRequiredService<TContext>();
         }
 
-        public static ExampleContext CreateContext(out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider currentUserProvider = null, ITestOutputHelper outputHelper = null, bool withTempTables = true)
-            => CreateContext<ExampleContext>(out secondaryContext, seed, currentUserProvider, outputHelper, withTempTables);
+        public static ExampleContext CreateContext(ITestOutputHelper outputHelper, out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider currentUserProvider = null, bool withTempTables = true)
+            => CreateContext<ExampleContext>(outputHelper, out secondaryContext, seed, currentUserProvider, withTempTables);
 
 
         #endregion

@@ -15,7 +15,7 @@ namespace IntelligentData.Tests
         public VersionedEntity_Should(ITestOutputHelper output)
         {
             _output = output ?? throw new ArgumentNullException(nameof(output));
-            _db = ExampleContext.CreateContext();
+            _db = ExampleContext.CreateContext(output);
         }
 
         [Fact]

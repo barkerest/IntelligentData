@@ -12,15 +12,16 @@ namespace IntelligentData.Attributes
     public class RuntimeDefaultCurrentUserNameAttribute : Attribute, IRuntimeDefaultValueProvider
     {
         /// <inheritdoc />
-        public object ValueOrDefault(object entity, object currentValue, DbContext context)
+        public object? ValueOrDefault(object entity, object? currentValue, DbContext context)
         {
             var provider = (context as IntelligentDbContext)?.CurrentUserProvider ?? Nobody.Instance;
 
             if (currentValue is null) return provider.GetUserName();
 
-            if (currentValue is string s && s == "") return provider.GetUserName();
+            if (currentValue is string s)
+                return string.IsNullOrWhiteSpace(s) ? provider.GetUserName() : s;
 
-            return currentValue;
+            return provider.GetUserName();
         }
     }
 }

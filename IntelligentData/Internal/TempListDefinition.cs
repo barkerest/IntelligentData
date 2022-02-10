@@ -35,15 +35,15 @@ namespace IntelligentData.Internal
         /// </summary>
         /// <param name="valueTypeName"></param>
         /// <param name="customize"></param>
-        public TempListDefinition(string valueTypeName = null, Action<PropertyBuilder> customize = null)
+        public TempListDefinition(string? valueTypeName = null, Action<PropertyBuilder>? customize = null)
             : this()
         {
             _valueTypeName = valueTypeName;
             _customize = customize;
         }
 
-        private readonly string _valueTypeName;
-        private readonly Action<PropertyBuilder> _customize;
+        private readonly string?                  _valueTypeName;
+        private readonly Action<PropertyBuilder>? _customize;
 
         /// <inheritdoc />
         public Type ValueType { get; }

@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using IntelligentData.Errors;
 using IntelligentData.Extensions;
 using IntelligentData.Interfaces;
 using IntelligentData.Internal;
@@ -16,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace IntelligentData
@@ -24,7 +26,7 @@ namespace IntelligentData
     /// Represents a parameterized SQL statement generated from an IQueryable object.
     /// </summary>
     /// <typeparam name="TEntity"></typeparam>
-    public class ParameterizedSql<TEntity>
+    public class ParameterizedSql<TEntity> : IParameterizedSql
     {
         private static readonly string NotKeyword =
             @"(?:
@@ -43,6 +45,7 @@ namespace IntelligentData
   (((?<POpen>\()[^\(\)]*)+((?<PClose-POpen>\))[^\(\)]*)+)*(?(POpen)(?!))
 )"; // note that contents of parens are not further processed and may break if a paren appears within a string inside a paren block.
 
+        // ReSharper disable once StaticMemberInGenericType
         private static readonly Regex SelectRipper = new Regex(
             $@"\A\s*
 (?<WITH>WITH\s+\{{[^}}]*\}})?
@@ -69,35 +72,35 @@ SELECT
         /// </summary>
         public string SqlText { get; }
 
-        private readonly string _action;
-        private readonly string _tableAlias;
-        private readonly string _tableName;
-        private readonly string _fromClause;
-        private readonly string _whereClause;
+        private readonly string  _action;
+        private readonly string? _tableAlias;
+        private readonly string? _tableName;
+        private readonly string  _fromClause;
+        private readonly string  _whereClause;
 
         /// <summary>
         /// Gets the DB context this parameterized SQL is configured against. 
         /// </summary>
         public DbContext DbContext { get; }
 
-        private readonly ISqlKnowledge              _knowledge;
-        private readonly ILogger                    _logger;
-        private readonly Dictionary<string, object> _parameterValues;
-        private readonly IQueryable<TEntity>        _original;
-        private readonly QueryInfo                  _info;
-        public           bool                       ReadOnly { get; }
+        private readonly ISqlKnowledge               _knowledge;
+        private readonly ILogger                     _logger;
+        private readonly Dictionary<string, object?> _parameterValues;
+        private readonly IQueryable<TEntity>         _original;
+        private readonly QueryInfo                   _info;
+        public           bool                        ReadOnly { get; }
 
 
         /// <summary>
         /// The parameters for the SQL text.
         /// </summary>
-        public IReadOnlyDictionary<string, object> ParameterValues => _parameterValues;
+        public IReadOnlyDictionary<string, object?> ParameterValues => _parameterValues;
 
         private ParameterizedSql(
-            ParameterizedSql<TEntity>           source,
-            string                              action,
-            string                              sql,
-            IReadOnlyDictionary<string, object> parameterValues
+            ParameterizedSql<TEntity>            source,
+            string                               action,
+            string                               sql,
+            IReadOnlyDictionary<string, object?> parameterValues
         )
         {
             SqlText           = sql.Trim();
@@ -122,25 +125,25 @@ SELECT
         /// </summary>
         /// <param name="query"></param>
         /// <param name="logger"></param>
-        public ParameterizedSql(IQueryable<TEntity> query, ILogger logger = null)
+        public ParameterizedSql(IQueryable<TEntity> query, ILogger? logger = null)
         {
             _original = query;
             _info     = new QueryInfo(query);
             DbContext = _info.Context.Context;
+            var sp = ((IInfrastructure<IServiceProvider>)DbContext).Instance;
             _logger = logger
-                      ?? ((IInfrastructure<IServiceProvider>) DbContext)
-                         .Instance
-                         .GetService(typeof(ILogger<ParameterizedSql<TEntity>>)) as ILogger<ParameterizedSql<TEntity>>;
+                      ?? sp.GetRequiredService<ILoggerFactory>().CreateLogger<ParameterizedSql<TEntity>>();
 
             if (DbContext.Model.FindEntityType(typeof(TEntity)) is null)
             {
-                _logger?.LogInformation($"The type {typeof(TEntity)} is not part of the data model, creating read-only SQL.");
+                _logger.LogInformation($"The type {typeof(TEntity)} is not part of the data model, creating read-only SQL.");
                 ReadOnly = true;
             }
 
-            _knowledge = SqlKnowledge.For(DbContext.Database.ProviderName);
+            _knowledge = SqlKnowledge.For(DbContext.Database.ProviderName ?? throw new UnnamedDatabaseProviderException())
+                         ?? throw new UnknownSqlProviderException(DbContext.Database.ProviderName);
 
-            _logger?.LogDebug("Generating SQL...");
+            _logger.LogDebug("Generating SQL...");
 
             var cmd = _info.Command;
             SqlText = cmd.CommandText;
@@ -152,8 +155,8 @@ SELECT
                                         v => "@" + v.Key.TrimStart('@'),
                                         v => v.Value
                                     );
-            _logger?.LogDebug(SqlText);
-            _logger?.LogDebug("Params: " + string.Join(", ", _parameterValues.Select(x => x.Key)));
+            _logger.LogDebug(SqlText);
+            _logger.LogDebug("Params: " + string.Join(", ", _parameterValues.Select(x => x.Key)));
 
             var rip = SelectRipper.Match(SqlText);
             if (!rip.Success)
@@ -190,7 +193,7 @@ SELECT
                 if (tex is null)
                 {
                     ReadOnly = true;
-                    _logger?.LogInformation($"Failed to locate record set named {_tableAlias}.");
+                    _logger.LogInformation($"Failed to locate record set named {_tableAlias}.");
                 }
                 else if (tex is TableExpression tt)
                 {
@@ -207,7 +210,7 @@ SELECT
                 else
                 {
                     ReadOnly = true;
-                    _logger?.LogInformation($"Failed to locate a table expression named {_tableAlias}.");
+                    _logger.LogInformation($"Failed to locate a table expression named {_tableAlias}.");
                 }
             }
         }
@@ -241,18 +244,32 @@ SELECT
         {
             if (string.IsNullOrWhiteSpace(_whereClause)) return "";
 
-            var ctx = DbContext ?? throw new InvalidOperationException("No current context.");
-            var model = ctx.Model.FindEntityType(typeof(TEntity)) ??
-                        throw new InvalidOperationException("Entity missing from context model.");
+            var ctx = DbContext
+                      ?? throw new ParameterizedSqlMissingContextException(this);
+
+            var model = ctx.Model.FindEntityType(typeof(TEntity))
+                        ?? throw new EntityMissingFromModelException(typeof(TEntity));
 
             var storeId = model.GetStoreObjectIdentifier()
-                          ?? throw new InvalidOperationException("Failed to locate StoreObjectIdentifier from context model.");
-            
+                          ?? throw new StoreObjectIdentifierNotFoundException(model);
+
+            var key = model.FindPrimaryKey()
+                      ?? throw new EntityTypeWithoutPrimaryKeyException(model);
+
             var result = new StringBuilder();
 
             result.Append("WHERE ");
 
-            var keys = model.FindPrimaryKey().Properties.Select(x => _knowledge.QuoteObjectName(x.GetColumnName(storeId))).ToArray();
+            var keys = key.Properties
+                          .Select(
+                              x =>
+                                  _knowledge.QuoteObjectName(
+                                      x.GetColumnName(storeId)
+                                      ?? throw new PropertyWithoutColumnNameException(x)
+                                  )
+                          )
+                          .ToArray();
+
             if (keys.Length == 1)
             {
                 result.Append(keys[0]);
@@ -261,6 +278,9 @@ SELECT
             {
                 result.Append(_knowledge.ConcatValues(keys));
             }
+
+            if (string.IsNullOrWhiteSpace(_tableAlias))
+                throw new ParameterizedSqlMissingAliasException(this);
 
             var subAlias = _knowledge.QuoteObjectName(_tableAlias) + ".";
 
@@ -287,19 +307,17 @@ SELECT
         public ParameterizedSql<TEntity> ToDelete()
         {
             if (ReadOnly)
-                throw new InvalidOperationException("The DELETE SQL cannot be automatically generated from this statement.");
+                throw new CannotConvertReadOnlyToDeleteException();
             if (!IsSelect)
-                throw new InvalidOperationException("Only SELECT statements can be converted to DELETE statements.");
+                throw new CannotConvertNonSelectToDeleteException();
             if (IsGrouped)
-                throw new InvalidOperationException(
-                    "An aggregate SELECT statement cannot be converted to a DELETE statement."
-                );
+                throw new CannotConvertAggregateToDeleteException();
             if (HasWithExpression)
-                throw new InvalidOperationException(
-                    "A SELECT statement with a WITH clause cannot be converted to a DELETE statement."
-                );
+                throw new CannotConvertCteToDeleteException();
 
             string sql;
+            if (string.IsNullOrWhiteSpace(_tableAlias))
+                throw new ParameterizedSqlMissingAliasException(this);
 
             if (_knowledge.DeleteSupportsTableAliases)
             {
@@ -310,8 +328,8 @@ SELECT
                 sql = $"DELETE FROM {_tableName} {GenerateUnAliasedWhereClause()}".Trim();
             }
 
-            _logger?.LogDebug("Generating DELETE SQL");
-            _logger?.LogDebug(sql);
+            _logger.LogDebug("Generating DELETE SQL");
+            _logger.LogDebug(sql);
 
             return new ParameterizedSql<TEntity>(
                 this,
@@ -323,7 +341,10 @@ SELECT
 
         private string ColumnNameFor(IProperty prop, StoreObjectIdentifier storeObjectIdentifier)
         {
-            return _knowledge.QuoteObjectName(prop.GetColumnName(storeObjectIdentifier));
+            var propName = prop.GetColumnName(storeObjectIdentifier)
+                           ?? throw new PropertyWithoutColumnNameException(prop);
+
+            return _knowledge.QuoteObjectName(propName);
         }
 
         /// <summary>
@@ -333,32 +354,34 @@ SELECT
         /// <returns></returns>
         public ParameterizedSql<TEntity> ToUpdate(Expression<Func<TEntity, TEntity>> update)
         {
-            if (ReadOnly)
-                throw new InvalidOperationException("The UPDATE SQL cannot be automatically generated from this statement.");
-            if (!IsSelect)
-                throw new InvalidOperationException("Only SELECT statements can be converted to UPDATE statements.");
-            if (IsGrouped)
-                throw new InvalidOperationException("An aggregate SELECT statement cannot be converted to an UPDATE statement.");
-            if (HasWithExpression)
-                throw new InvalidOperationException("A SELECT statement with a WITH clause cannot be converted to an UPDATE statement.");
+            if (ReadOnly) throw new CannotConvertReadOnlyToUpdateException();
+            if (!IsSelect) throw new CannotConvertNonSelectToUpdateException();
+            if (IsGrouped) throw new CannotConvertAggregateToUpdateException();
+            if (HasWithExpression) throw new CannotConvertCteToUpdateException();
 
-            if (!(update.Body is MemberInitExpression initExpression))
-                throw new InvalidOperationException("The update expression must be a member initialization expression.");
+            if (update.Body is not MemberInitExpression initExpression)
+                throw new MemberInitializationExpressionRequiredException(update);
 
             var paramValues = ParameterValues.ToDictionary(x => x.Key, x => x.Value);
             var builder     = new StringBuilder();
 
-            _logger?.LogDebug("Generating UPDATE SQL");
+            _logger.LogDebug("Generating UPDATE SQL");
 
-            var context = DbContext ??
-                          throw new InvalidOperationException("No current DbContext available.");
+            var context = DbContext
+                          ?? throw new ParameterizedSqlMissingContextException(this);
 
-            var entityType = context.Model.FindEntityType(typeof(TEntity)) ??
-                             throw new InvalidOperationException("Failed to locate entity type.");
+            var entityType = context.Model.FindEntityType(typeof(TEntity))
+                             ?? throw new EntityMissingFromModelException(typeof(TEntity));
 
             var storeId = entityType.GetStoreObjectIdentifier()
-                          ?? throw new InvalidOperationException("Failed to locate StoreObjectIdentifier.");
-            
+                          ?? throw new StoreObjectIdentifierNotFoundException(entityType);
+
+            if (string.IsNullOrWhiteSpace(_tableAlias))
+                throw new ParameterizedSqlMissingAliasException(this);
+
+            if (string.IsNullOrWhiteSpace(_tableName))
+                throw new EntityTypeWithoutTableNameException(entityType);
+
             builder.Append("UPDATE ");
 
             string subAlias;
@@ -388,16 +411,14 @@ SELECT
             bool first = true;
             foreach (var binding in initExpression.Bindings)
             {
-                if (!(binding is MemberAssignment assignment))
-                    throw new InvalidOperationException("Only simple assignment bindings are supported in the update expression.");
+                if (binding is not MemberAssignment assignment)
+                    throw new MemberAssignmentBindingRequiredException(binding);
 
                 if (!first) builder.Append(", ");
                 first = false;
 
-                var prop = entityType.FindProperty(assignment.Member.Name) ??
-                           throw new InvalidOperationException(
-                               $"The entity does not contain a {assignment.Member.Name} property."
-                           );
+                var prop = entityType.FindProperty(assignment.Member.Name)
+                           ?? throw new EntityTypeMissingPropertyException(entityType, assignment.Member.Name);
 
                 builder.Append(subAlias);
 
@@ -421,7 +442,7 @@ SELECT
             }
 
             var sql = builder.ToString().Trim();
-            _logger?.LogDebug(sql);
+            _logger.LogDebug(sql);
 
             return new ParameterizedSql<TEntity>(
                 this,
@@ -450,27 +471,36 @@ SELECT
 
         private string ComputeColumnName(DbContext context, IEntityType entityType, MemberExpression expr)
         {
-            if (expr.Expression is ParameterExpression parameterExpression)
+            if (expr.Expression is ParameterExpression)
             {
-                var storeId = entityType.GetStoreObjectIdentifier() 
-                              ?? throw new InvalidOperationException("Failed to locate StoreObjectIdentifier.");
-                var prop = entityType.FindProperty(expr.Member.Name) ??
-                           throw new InvalidOperationException($"The model does not contain a property named {expr.Member.Name}.");
-                return _knowledge.UpdateSupportsTableAliases
-                           ? $"{_knowledge.QuoteObjectName(_tableAlias)}.{ColumnNameFor(prop, storeId)}"
-                           : ColumnNameFor(prop, storeId);
+                var storeId = entityType.GetStoreObjectIdentifier()
+                              ?? throw new StoreObjectIdentifierNotFoundException(entityType);
+
+                var prop = entityType.FindProperty(expr.Member.Name)
+                           ?? throw new EntityTypeMissingPropertyException(entityType, expr.Member.Name);
+
+                if (_knowledge.UpdateSupportsTableAliases)
+                {
+                    if (string.IsNullOrWhiteSpace(_tableAlias))
+                        throw new ParameterizedSqlMissingAliasException(this);
+
+                    return $"{_knowledge.QuoteObjectName(_tableAlias)}.{ColumnNameFor(prop, storeId)}";
+                }
+
+                return ColumnNameFor(prop, storeId);
             }
 
-            if (!_knowledge.UpdateSupportsTableAliases) throw new InvalidOperationException("Current engine does not support aliased member references.");
+            if (!_knowledge.UpdateSupportsTableAliases)
+                throw new AliasedMemberReferencesNotSupportedException();
 
             var colEx = expr;
 
             var alias = new StringBuilder();
 
-            while (!(expr.Expression is ParameterExpression))
+            while (expr.Expression is not ParameterExpression)
             {
-                expr = expr.Expression as MemberExpression ??
-                       throw new InvalidOperationException("Expected member expression.");
+                expr = expr.Expression as MemberExpression
+                       ?? throw new MemberExpressionRequiredException(expr.Expression, expr);
 
                 if (alias.Length > 0) alias.Insert(0, '.');
                 alias.Insert(0, expr.Member.Name);
@@ -479,54 +509,58 @@ SELECT
             alias.Insert(0, '.');
             alias.Insert(0, _tableAlias);
 
-            var entity = context.Model.FindEntityType(colEx.Type) ??
-                         throw new InvalidOperationException($"The {colEx.Type} model is not part of this data model.");
-            var entityProp = entity.FindProperty(colEx.Member.Name) ??
-                             throw new InvalidOperationException(
-                                 $"The {colEx.Member.Name} property is not part of the {colEx.Type} model."
-                             );
+            var entity = context.Model.FindEntityType(colEx.Type)
+                         ?? throw new EntityMissingFromModelException(colEx.Type);
+
+            var entityProp = entity.FindProperty(colEx.Member.Name)
+                             ?? throw new EntityTypeMissingPropertyException(entity, colEx.Member.Name);
+
             var exStoreId = entity.GetStoreObjectIdentifier()
-                            ?? throw new InvalidOperationException("Failed to locate the StoreObjectIdentifier.");
+                            ?? throw new StoreObjectIdentifierNotFoundException(entity);
+
+            if (string.IsNullOrWhiteSpace(_tableAlias))
+                throw new ParameterizedSqlMissingAliasException(this);
 
             return $"{_knowledge.QuoteObjectName(_tableAlias)}.{ColumnNameFor(entityProp, exStoreId)}";
         }
 
-        private object ComputeValue(MemberExpression expr)
+        private object? ComputeValue(MemberExpression expr)
         {
-            PropertyInfo propInfo  = expr.Member as PropertyInfo;
-            FieldInfo    fieldInfo = expr.Member as FieldInfo;
+            var propInfo  = expr.Member as PropertyInfo;
+            var fieldInfo = expr.Member as FieldInfo;
 
             if (propInfo is null &&
                 fieldInfo is null)
-                throw new InvalidOperationException("Member is not a field or property.");
+                throw new MemberMustBePropertyOrFieldException(expr.Member);
 
             if (expr.Expression is null)
             {
-                if (propInfo is null) return fieldInfo.GetValue(null);
-                return propInfo.GetValue(null);
+                return null;
             }
 
             if (expr.Expression is ConstantExpression constantExpression)
             {
                 var value = constantExpression.Value;
                 if (value is null) return null;
-                if (propInfo is null) return fieldInfo.GetValue(value);
-                return propInfo.GetValue(value);
+                if (propInfo is not null) return propInfo.GetValue(value);
+                if (fieldInfo is not null) return fieldInfo.GetValue(value);
+                throw new InvalidOperationException("Property and field missing.");
             }
 
             if (expr.Expression is MemberExpression memberExpression)
             {
                 var value = ComputeValue(memberExpression);
                 if (value is null) return null;
-                if (propInfo is null) return fieldInfo.GetValue(value);
-                return propInfo.GetValue(value);
+                if (propInfo is not null) return propInfo.GetValue(value);
+                if (fieldInfo is not null) return fieldInfo.GetValue(value);
+                throw new InvalidOperationException("Property and field missing.");
             }
 
             throw new InvalidOperationException($"Cannot compute value of {expr.GetType()} expression.");
         }
 
         private void AddColumnValue(
-            Expression  expr, StringBuilder builder, IDictionary<string, object> paramValues, DbContext context,
+            Expression  expr, StringBuilder builder, IDictionary<string, object?> paramValues, DbContext context,
             IEntityType entityType
         )
         {
@@ -556,7 +590,7 @@ SELECT
                     else
                     {
                         nextParamName = $"@__constant_{paramValues.Count}";
-                        paramValues.Add(nextParamName, constantExpression.Value);
+                        paramValues.Add(nextParamName, constantValue);
                         builder.Append(nextParamName);
                     }
 
@@ -671,7 +705,7 @@ SELECT
 
                             default:
                                 throw new InvalidOperationException(
-                                    $"Invalid unary operation: {binaryExpression.NodeType}"
+                                    $"Invalid binary operation: {binaryExpression.NodeType}"
                                 );
                         }
 
@@ -704,17 +738,16 @@ SELECT
         /// </summary>
         /// <param name="transaction"></param>
         /// <returns></returns>
-        public int ExecuteNonQuery(DbTransaction transaction = null)
+        public int ExecuteNonQuery(DbTransaction? transaction = null)
         {
-            var context = DbContext ?? throw new InvalidOperationException("No current DbContext.");
+            var context = DbContext ?? throw new ParameterizedSqlMissingContextException(this);
 
             var conn = context.Database.GetDbConnection();
-            if (conn.State == ConnectionState.Broken ||
-                conn.State == ConnectionState.Closed) conn.Open();
+            if (conn.State is ConnectionState.Broken or ConnectionState.Closed) conn.Open();
 
             var cmd = conn.CreateCommand();
             cmd.CommandText = SqlText;
-            if (transaction != null)
+            if (transaction is not null)
             {
                 cmd.Transaction = transaction;
             }
@@ -727,7 +760,7 @@ SELECT
                 cmd.Parameters.Add(p);
             }
 
-            _logger?.LogInformation("Executing Command:\r\n" + SqlText);
+            _logger.LogInformation("Executing Command:\r\n" + SqlText);
 
             return cmd.ExecuteNonQuery();
         }
@@ -738,17 +771,16 @@ SELECT
         /// </summary>
         /// <param name="transaction"></param>
         /// <returns></returns>
-        public Task<int> ExecuteNonQueryAsync(DbTransaction transaction = null)
+        public Task<int> ExecuteNonQueryAsync(DbTransaction? transaction = null)
         {
-            var context = DbContext ?? throw new InvalidOperationException("No current DbContext.");
+            var context = DbContext ?? throw new ParameterizedSqlMissingContextException(this);
 
             var conn = context.Database.GetDbConnection();
-            if (conn.State == ConnectionState.Broken ||
-                conn.State == ConnectionState.Closed) conn.Open();
+            if (conn.State is ConnectionState.Broken or ConnectionState.Closed) conn.Open();
 
             var cmd = conn.CreateCommand();
             cmd.CommandText = SqlText;
-            if (transaction != null)
+            if (transaction is not null)
             {
                 cmd.Transaction = transaction;
             }
@@ -761,7 +793,7 @@ SELECT
                 cmd.Parameters.Add(p);
             }
 
-            _logger?.LogInformation("Executing Command:\r\n" + SqlText);
+            _logger.LogInformation("Executing Command:\r\n" + SqlText);
 
             return cmd.ExecuteNonQueryAsync();
         }
@@ -774,7 +806,7 @@ SELECT
         {
             var r = new Regex(@"@[A-Z_][A-Z0-9_]+", RegexOptions.IgnoreCase);
 
-            var list = new List<object>();
+            var list = new List<object?>();
             var fmt = r.Replace(
                 SqlText, (m) =>
                 {

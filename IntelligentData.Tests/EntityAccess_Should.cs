@@ -16,7 +16,7 @@ namespace IntelligentData.Tests
 
         public EntityAccess_Should(ITestOutputHelper output)
         {
-            _db     = ExampleContext.CreateContext(true);
+            _db     = ExampleContext.CreateContext(output, true);
             _output = output ?? throw new ArgumentNullException(nameof(output));
         }
 

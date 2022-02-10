@@ -19,7 +19,7 @@ namespace IntelligentData.Tests
         {
             _output = output ?? throw new ArgumentNullException(nameof(output));
             _logger = new TestOutputLogger(output);
-            _db     = ExampleContext.CreateContext(true);
+            _db     = ExampleContext.CreateContext(output, true);
             _db.SetDefaultAccessLevel(AccessLevel.FullAccess);
         }
 
@@ -84,6 +84,7 @@ namespace IntelligentData.Tests
             var cnt      = qry.Count();
             Assert.True(cnt > 0);
             var sql = qry.ToParameterizedSql().ToUpdate(x => new ReadInsertUpdateDeleteEntity() {Name = itemName});
+            Assert.Equal(cnt, qry.Count()); // the act of generating the SQL should not alter the count.
             _output.WriteLine(sql.ToString());
             _output.WriteLine($"Should update {cnt} records.");
             Assert.Equal(cnt, sql.ExecuteNonQuery());
@@ -99,6 +100,7 @@ namespace IntelligentData.Tests
             var cnt      = qry.Count();
             Assert.True(cnt > 0);
             var sql = qry.ToParameterizedSql().ToDelete();
+            Assert.Equal(cnt, qry.Count()); // the act of generating the SQL should not alter the count.
             _output.WriteLine(sql.ToString());
             _output.WriteLine($"Should delete {cnt} records.");
             Assert.Equal(cnt, sql.ExecuteNonQuery());

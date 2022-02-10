@@ -18,7 +18,7 @@ namespace IntelligentData.Tests
         {
             _output = output ?? throw new ArgumentNullException(nameof(output));
             _logger = new TestOutputLogger(output);
-            _db     = ExampleContext.CreateContext();
+            _db     = ExampleContext.CreateContext(output);
             _db.SetDefaultAccessLevel(AccessLevel.FullAccess);
         }
 

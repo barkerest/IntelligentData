@@ -14,6 +14,6 @@ namespace IntelligentData.Interfaces
         /// <param name="currentValue">The current value of the property.</param>
         /// <param name="context">The context the entity is being saved into.</param>
         /// <returns>Returns the formatted string value for the property.</returns>
-        string FormatValue(object entity, string currentValue, DbContext context);
+        string? FormatValue(object entity, string? currentValue, DbContext context);
     }
 }

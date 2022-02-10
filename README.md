@@ -149,7 +149,7 @@ Check out the tests for examples of how the various features are supposed to wor
 
 ## Version History
 
-* __6.0.0__ 2022-02-07
+* __6.0.0__ 2022-02-10
   Update to work with EF Core 6.0.
 
 * __1.2.7__ 2021-01-21

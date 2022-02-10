@@ -21,7 +21,7 @@ namespace IntelligentData.Tests
         [Fact]
         public void BeCreatedByDefault()
         {
-            using var db = ExampleContext.CreateContext(withTempTables: true);
+            using var db = ExampleContext.CreateContext(_output, withTempTables: true);
             Assert.True(db.HasTempList<int>());
             Assert.True(db.HasTempList<long>());
             Assert.True(db.HasTempList<string>());
@@ -43,7 +43,7 @@ namespace IntelligentData.Tests
         [Fact]
         public void NotBeCreatedWhenSkipped()
         {
-            using var db = ExampleContext.CreateContext(withTempTables: false);
+            using var db = ExampleContext.CreateContext(_output, withTempTables: false);
             Assert.False(db.HasTempList<int>());
             Assert.False(db.HasTempList<long>());
             Assert.False(db.HasTempList<string>());
@@ -62,7 +62,7 @@ namespace IntelligentData.Tests
             var items = new int[] {1, 3, 5, 7, 9};
             var otherItems = new int[] {2, 4, 6, 8, 10};
             
-            using var db = ExampleContext.CreateContext(withTempTables: withTempTables);
+            using var db = ExampleContext.CreateContext(_output, withTempTables: withTempTables);
             Assert.Equal(withTempTables, db.HasTempList<int>());
 
             // have data in before our first test
