@@ -149,22 +149,22 @@ Check out the tests for examples of how the various features are supposed to wor
 
 ## Version History
 
-* __6.0.1__ 2022-02-10
+* __6.0.1__ 2022-02-10  
   Fix minor typos in the readme file.
 
-* __6.0.0__ 2022-02-10
+* __6.0.0__ 2022-02-10  
   Update to work with EF Core 6.0.
 
-* __1.2.7__ 2021-01-21
+* __1.2.7__ 2021-01-21  
   Fix temporary list missing parameters.
 
-* __1.2.6__ 2021-01-13
+* __1.2.6__ 2021-01-13  
   Fix null reference exception on shadow properties.
   
-* __1.2.5__ 2021-01-12
+* __1.2.5__ 2021-01-12  
   Allow for blank table name prefix (null, empty, or whitespace) to be ignored.
 
-* __1.2.4__ 2020-05-26
+* __1.2.4__ 2020-05-26  
   Add transaction parameter to BulkDelete and BulkUpdate.
 
 * __1.2.3__ 2020-04-23  
