@@ -53,7 +53,7 @@ This is an extension library for EntityFramework that adds some intelligence to 
   Attributes defined with this interface will allow for runtime customization of the data model
   in an IntelligentDbContext.
 * __IndexAttribute__ and __CompositeIndexAttribute__  
-  These attributes are examples of the IEntityCustomer interface and also provide model validation
+  These attributes are examples of the IEntityCustomizer interface and also provide model validation
   if the Unique property is set to true.  They also make use of extensions added to the 
   ValidationContext type to allow extracting the appropriate DbContext for an object being 
   validated and for generating basic SQL count statements.
@@ -61,7 +61,7 @@ This is an extension library for EntityFramework that adds some intelligence to 
   Often times I found myself having multiple somewhat related databases where IDs might be shared.
   In these cases EF would insert those values into the SQL statement generated, which could lead to
   excessively huge SQL statements.  Worse, I might need to perform multiple transactions with the
-  list would would cause more giant SQL statements.  To include the temporary tables in your model
+  list which would cause more giant SQL statements.  To include the temporary tables in your model
   you will need to call the `WithTemporaryLists()` extension method on your DbContextOptions builder.
 
 
@@ -148,6 +148,9 @@ entity.SaveToDatabase();
 Check out the tests for examples of how the various features are supposed to work.
 
 ## Version History
+
+* __6.0.1__ 2022-02-10
+  Fix minor typos in the readme file.
 
 * __6.0.0__ 2022-02-10
   Update to work with EF Core 6.0.
