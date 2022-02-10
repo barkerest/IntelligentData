@@ -7,7 +7,7 @@
         <Product>IntelligentData</Product>
         <Version>6.0.1</Version>
         <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
-        <PackageReadmeFile>readme.md</PackageReadmeFile>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageProjectUrl>https://github.com/barkerest/IntelligentData</PackageProjectUrl>
         <Nullable>enable</Nullable>
     </PropertyGroup>
