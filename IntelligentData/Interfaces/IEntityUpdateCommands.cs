@@ -36,7 +36,7 @@ namespace IntelligentData.Interfaces
         /// <remarks>
         /// Entities with an auto-increment primary key will have the value retrieved after insert.
         /// </remarks>
-        bool Insert(TEntity entity, IDbTransaction transaction);
+        bool Insert(TEntity entity, IDbTransaction? transaction);
 
         /// <summary>
         /// Updates the entity in the database.
@@ -48,7 +48,7 @@ namespace IntelligentData.Interfaces
         /// The entity should be known to the DbContext entity tracker so that original values can
         /// be retrieved for concurrency tokens.
         /// </remarks>
-        bool Update(TEntity entity, IDbTransaction transaction);
+        bool Update(TEntity entity, IDbTransaction? transaction);
 
         /// <summary>
         /// Removes (or hides) the entity from the database.
@@ -62,6 +62,6 @@ namespace IntelligentData.Interfaces
         /// If remove properties are set, then the entity will not be deleted but is instead assumed
         /// to be hidden.
         /// </remarks>
-        bool Remove(TEntity entity, IDbTransaction transaction);
+        bool Remove(TEntity entity, IDbTransaction? transaction);
     }
 }

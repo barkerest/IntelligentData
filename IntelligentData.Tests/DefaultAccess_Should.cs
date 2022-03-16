@@ -6,6 +6,8 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
+    [Collection("Database Instance")]
+
     public class DefaultAccess_Should : IDisposable
     {
         private readonly ITestOutputHelper _output;

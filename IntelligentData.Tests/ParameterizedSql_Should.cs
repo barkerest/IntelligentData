@@ -9,6 +9,8 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
+    [Collection("Database Instance")]
+
     public class ParameterizedSql_Should : IDisposable
     {
         private readonly ITestOutputHelper _output;

@@ -9,6 +9,8 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
+    [Collection("Database Instance")]
+
     public class TemporaryLists_Should 
     {
         private readonly ITestOutputHelper _output;

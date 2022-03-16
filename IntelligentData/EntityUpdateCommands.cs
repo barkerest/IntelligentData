@@ -442,12 +442,29 @@ namespace IntelligentData
         {
             try
             {
-                var sw = new Stopwatch();
-                sw.Start();
-                var ret = cmd.ExecuteNonQuery();
-                sw.Stop();
-                Logger.LogDebug($"Executed DbCommand ({sw.ElapsedMilliseconds:#,##0}ms).\n{cmd.CommandText}");
-                return ret;
+                var conn = Context.Database.GetDbConnection();
+                var open = conn.State == ConnectionState.Open;
+                if (!open)
+                {
+                    conn.Open();
+                }
+                try
+                {
+                    var sw = new Stopwatch();
+                    sw.Start();
+                    cmd.Connection = conn;
+                    var ret = cmd.ExecuteNonQuery();
+                    sw.Stop();
+                    Logger.LogDebug($"Executed DbCommand ({sw.ElapsedMilliseconds:#,##0}ms).\n{cmd.CommandText}");
+                    return ret;
+                }
+                finally
+                {
+                    if (!open)
+                    {
+                        conn.Close();
+                    }
+                }
             }
             catch
             {
@@ -460,12 +477,30 @@ namespace IntelligentData
         {
             try
             {
-                var sw = new Stopwatch();
-                sw.Start();
-                var ret = cmd.ExecuteScalar();
-                sw.Stop();
-                Logger.LogDebug($"Executed DbCommand ({sw.ElapsedMilliseconds:#,##0}ms).\n{cmd.CommandText}");
-                return ret is DBNull ? null : ret;
+                var conn = Context.Database.GetDbConnection();
+                var open = conn.State == ConnectionState.Open;
+                if (!open)
+                {
+                    conn.Open();
+                }
+
+                try
+                {
+                    var sw = new Stopwatch();
+                    sw.Start();
+                    cmd.Connection = conn;
+                    var ret = cmd.ExecuteScalar();
+                    sw.Stop();
+                    Logger.LogDebug($"Executed DbCommand ({sw.ElapsedMilliseconds:#,##0}ms).\n{cmd.CommandText}");
+                    return ret is DBNull ? null : ret;
+                }
+                finally
+                {
+                    if (!open)
+                    {
+                        conn.Close();
+                    }
+                }
             }
             catch
             {
@@ -474,6 +509,19 @@ namespace IntelligentData
             }
         }
 
+        private object? ExecuteCommandForValue(TEntity entity, (IDbCommand, IDictionary<string, Func<TEntity, object?>>) cmd)
+        {
+            foreach (var param in cmd.Item2)
+            {
+                var paramValue = param.Value(entity) ?? DBNull.Value;
+                ((IDataParameter) cmd.Item1.Parameters[param.Key]).Value = paramValue;
+            }
+
+            var result = ExecScalar(cmd.Item1);
+            Context.Entry(entity).State = EntityState.Detached;
+            return result;
+        }
+        
         private bool ExecuteCommand(TEntity entity, (IDbCommand, IDictionary<string, Func<TEntity, object?>>) cmd)
         {
             foreach (var param in cmd.Item2)
@@ -491,11 +539,48 @@ namespace IntelligentData
         #endregion
 
         #region Insert
-        
+
+        private IDbCommand?                                  _insertWithReturnCommand;
+        private IDictionary<string, Func<TEntity, object?>>? _insertWithReturnParameters;
+
+        private (IDbCommand, IDictionary<string, Func<TEntity, object?>>) GetInsertWithReturnCommand(IDbTransaction? transaction)
+        {
+            if (_insertWithReturnCommand is not null &&
+                _insertWithReturnParameters is not null)
+            {
+                _insertWithReturnCommand.Transaction = transaction;
+                return (_insertWithReturnCommand, _insertWithReturnParameters);
+            }
+
+            var ins = GetInsertCommand(null);
+            var ret = GetLastInsertIdCommand(null);
+
+            var cmd = Context.Database.GetDbConnection().CreateCommand();
+            cmd.CommandText                      = ins.Item1.CommandText + "; " + ret.CommandText;
+            cmd.Parameters.AddRange(
+                ins.Item1.Parameters.Cast<DbParameter>()
+                   .Select(
+                       p =>
+                       {
+                           var r = cmd.CreateParameter();
+                           r.ParameterName = p.ParameterName;
+                           r.Value         = p.Value;
+                           return r;
+                       }
+                   )
+                   .ToArray()
+            );
+            _insertWithReturnCommand             = cmd;
+            _insertWithReturnParameters          = ins.Item2;
+            _insertWithReturnCommand.Transaction = transaction;
+            
+            return (_insertWithReturnCommand, _insertWithReturnParameters);
+        }
+
         private IDbCommand?                                  _insertCommand;
         private IDictionary<string, Func<TEntity, object?>>? _insertParameters;
 
-        private (IDbCommand,IDictionary<string, Func<TEntity, object?>>) GetInsertCommand(IDbTransaction transaction)
+        private (IDbCommand,IDictionary<string, Func<TEntity, object?>>) GetInsertCommand(IDbTransaction? transaction)
         {
             if (_insertCommand is not null && _insertParameters is not null)
             {
@@ -594,7 +679,7 @@ namespace IntelligentData
         
         private IDbCommand? _lastInsertIdCommand;
 
-        private IDbCommand GetLastInsertIdCommand(IDbTransaction transaction)
+        private IDbCommand GetLastInsertIdCommand(IDbTransaction? transaction)
         {
             if (_lastInsertIdCommand is not null)
             {
@@ -610,9 +695,8 @@ namespace IntelligentData
         }
 
         /// <inheritdoc />
-        public virtual bool Insert(TEntity entity, IDbTransaction transaction)
+        public virtual bool Insert(TEntity entity, IDbTransaction? transaction)
         {
-            if (!ExecuteCommand(entity, GetInsertCommand(transaction))) return false;
             
             if (Key.Properties.Count == 1)
             {
@@ -620,15 +704,19 @@ namespace IntelligentData
                 if (prop.ValueGenerated == ValueGenerated.OnAdd &&
                     prop.ClrType.IsPrimitive)
                 {
-                    var lastId = ExecScalar(GetLastInsertIdCommand(transaction));
+                    var lastId = ExecuteCommandForValue(entity, GetInsertWithReturnCommand(transaction));
+                    if (lastId is null ||
+                        Convert.ToInt64(lastId) == 0)
+                    {
+                        return false;
+                    }
                     
                     // database generated IDs may be provided in BIGINT format
                     // and the entity may just be an INT
                     // perform the conversion now to prevent a type-cast error.
-                    if (lastId is long longId &&
-                        prop.ClrType == typeof(int))
+                    if (lastId.GetType() != prop.ClrType)
                     {
-                        lastId = (int) longId;
+                        lastId = Convert.ChangeType(lastId, prop.ClrType);
                     }
                     
                     if (prop.PropertyInfo is not null)
@@ -645,6 +733,10 @@ namespace IntelligentData
                     }
                 }
             }
+            else
+            {
+                if (!ExecuteCommand(entity, GetInsertCommand(transaction))) return false;
+            }
 
             Context.Entry(entity).State = EntityState.Detached;
 
@@ -658,7 +750,7 @@ namespace IntelligentData
         private IDbCommand?                                  _updateCommand;
         private IDictionary<string, Func<TEntity, object?>>? _updateParameters;
 
-        private (IDbCommand,IDictionary<string, Func<TEntity, object?>>) GetUpdateCommand(IDbTransaction transaction)
+        private (IDbCommand,IDictionary<string, Func<TEntity, object?>>) GetUpdateCommand(IDbTransaction? transaction)
         {
             if (_updateCommand is not null && _updateParameters is not null)
             {
@@ -769,7 +861,7 @@ namespace IntelligentData
         
         
         /// <inheritdoc />
-        public virtual bool Update(TEntity entity, IDbTransaction transaction)
+        public virtual bool Update(TEntity entity, IDbTransaction? transaction)
         {
             return ExecuteCommand(entity, GetUpdateCommand(transaction));
         }
@@ -781,7 +873,7 @@ namespace IntelligentData
         private IDbCommand?                                  _removeCommand;
         private IDictionary<string, Func<TEntity, object?>>? _removeParameters;
         
-        private (IDbCommand, IDictionary<string, Func<TEntity, object?>>) GetRemoveCommand(IDbTransaction transaction)
+        private (IDbCommand, IDictionary<string, Func<TEntity, object?>>) GetRemoveCommand(IDbTransaction? transaction)
         {
             if (_removeCommand is not null && _removeParameters is not null)
             {
@@ -897,7 +989,7 @@ namespace IntelligentData
         }
 
         /// <inheritdoc />
-        public virtual bool Remove(TEntity entity, IDbTransaction transaction)
+        public virtual bool Remove(TEntity entity, IDbTransaction? transaction)
         {
             return ExecuteCommand(entity, GetRemoveCommand(transaction));
         }

@@ -10,10 +10,12 @@ using Xunit.Sdk;
 
 namespace IntelligentData.Tests
 {
+    [Collection("Database Instance")]
+
     public class QueryableExtensions_Should : IDisposable
     {
-        private ExampleContext    _db;
-        private ITestOutputHelper _output;
+        private readonly ExampleContext    _db;
+        private readonly ITestOutputHelper _output;
 
         public QueryableExtensions_Should(ITestOutputHelper output)
         {
@@ -98,6 +100,25 @@ namespace IntelligentData.Tests
             }
         }
 
+        [Fact]
+        public void GenerateDifferentSqlWithDifferentFilterLists()
+        {
+            var list = new[] { "John", "George", "Larry" };
+            var sql1 = _db.ReadInsertUpdateEntities.Where(r => list.Contains(r.Name)).ToParameterizedSql();
+            
+            var list2 = new[] { "Lynn", "Mary", "Sara" };
+            var sql2  = _db.ReadInsertUpdateEntities.Where(r => list2.Contains(r.Name)).ToParameterizedSql();
+            
+            _output.WriteLine($"1: {sql1}\n2: {sql2}");
+            Assert.NotEqual(sql1.SqlText, sql2.SqlText);
+
+            sql1 = sql1.ToUpdate(x => new ReadInsertUpdateEntity() { Name = x.Name + " Updated" });
+            sql2 = sql2.ToUpdate(x => new ReadInsertUpdateEntity() { Name = x.Name + " Updated" });
+            _output.WriteLine($"1: {sql1}\n2: {sql2}");
+            Assert.NotEqual(sql1.SqlText, sql2.SqlText);
+            
+        }
+        
         public void Dispose()
         {
             _db?.Dispose();

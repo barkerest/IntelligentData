@@ -69,7 +69,7 @@ namespace IntelligentData.Internal
                 GetTableName(knowledge),
                 "(ListId INTEGER NOT NULL, EntryValue " +
                 GetValueTypeName(knowledge) +
-                "NOT NULL, PRIMARY KEY (ListId, EntryValue))"
+                " NOT NULL, PRIMARY KEY (ListId, EntryValue))"
             );
         }
 

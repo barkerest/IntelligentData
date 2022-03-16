@@ -6,6 +6,8 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
+    [Collection("Database Instance")]
+
     public class RuntimeDefault_Should : IDisposable
     {
         private ExampleContext    _db;

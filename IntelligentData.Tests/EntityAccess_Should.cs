@@ -9,6 +9,8 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
+    [Collection("Database Instance")]
+
     public class EntityAccess_Should : IDisposable
     {
         private ExampleContext    _db;

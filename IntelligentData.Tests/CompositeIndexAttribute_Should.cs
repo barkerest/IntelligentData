@@ -10,6 +10,8 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
+    [Collection("Database Instance")]
+
     public class CompositeIndexAttribute_Should : IDisposable
     {
         private readonly ITestOutputHelper _output;

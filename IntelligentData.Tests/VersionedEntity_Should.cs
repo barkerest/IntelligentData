@@ -7,6 +7,8 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
+    [Collection("Database Instance")]
+
     public class VersionedEntity_Should : IDisposable
     {
         private readonly ITestOutputHelper _output;

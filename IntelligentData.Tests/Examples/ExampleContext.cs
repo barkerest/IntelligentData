@@ -1,11 +1,21 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
 using IntelligentData.Enums;
 using IntelligentData.Extensions;
 using IntelligentData.Interfaces;
+using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MySqlConnector;
+using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Xunit.Abstractions;
 
 namespace IntelligentData.Tests.Examples
@@ -35,14 +45,13 @@ namespace IntelligentData.Tests.Examples
 
         public static readonly string NewName = "Tasmanian Devil";
 
-        public override  string TableNamePrefix { get; }
+        public override string TableNamePrefix { get; }
 
         public ExampleContext(DbContextOptions options, IUserInformationProvider currentUserProvider, ILogger logger)
             : this(options, currentUserProvider, logger, "EX")
         {
-            
         }
-        
+
         protected ExampleContext(DbContextOptions options, IUserInformationProvider currentUserProvider, ILogger logger, string prefix)
             : base(options, currentUserProvider, logger)
         {
@@ -75,10 +84,10 @@ namespace IntelligentData.Tests.Examples
             modelBuilder
                 .Entity<AutoDateExample>()
                 .Property(x => x.SaveCount)
-                .HasAutoUpdate(v => (int) v + 1);
+                .HasAutoUpdate(v => (int)v + 1);
         }
 
-        private         AccessLevel _defaultAccessLevel = AccessLevel.ReadOnly;
+        private AccessLevel _defaultAccessLevel = AccessLevel.ReadOnly;
 
 
         public override AccessLevel DefaultAccessLevel => _defaultAccessLevel;
@@ -88,22 +97,21 @@ namespace IntelligentData.Tests.Examples
             _defaultAccessLevel = level;
         }
 
-
         #region Create Context
 
         private void Seed()
         {
             foreach (var name in ExampleNames)
             {
-                ReadOnlyEntities.Add(new ReadOnlyEntity() {Name                             = name});
-                ReadInsertEntities.Add(new ReadInsertEntity() {Name                         = name});
-                ReadUpdateEntities.Add(new ReadUpdateEntity() {Name                         = name});
-                ReadDeleteEntities.Add(new ReadDeleteEntity() {Name                         = name});
-                ReadInsertUpdateEntities.Add(new ReadInsertUpdateEntity() {Name             = name});
-                ReadInsertDeleteEntities.Add(new ReadInsertDeleteEntity() {Name             = name});
-                ReadUpdateDeleteEntities.Add(new ReadUpdateDeleteEntity() {Name             = name});
-                ReadInsertUpdateDeleteEntities.Add(new ReadInsertUpdateDeleteEntity() {Name = name});
-                DynamicAccessEntities.Add(new DynamicAccessEntity() {Name                   = name});
+                ReadOnlyEntities.Add(new ReadOnlyEntity() { Name                             = name });
+                ReadInsertEntities.Add(new ReadInsertEntity() { Name                         = name });
+                ReadUpdateEntities.Add(new ReadUpdateEntity() { Name                         = name });
+                ReadDeleteEntities.Add(new ReadDeleteEntity() { Name                         = name });
+                ReadInsertUpdateEntities.Add(new ReadInsertUpdateEntity() { Name             = name });
+                ReadInsertDeleteEntities.Add(new ReadInsertDeleteEntity() { Name             = name });
+                ReadUpdateDeleteEntities.Add(new ReadUpdateDeleteEntity() { Name             = name });
+                ReadInsertUpdateDeleteEntities.Add(new ReadInsertUpdateDeleteEntity() { Name = name });
+                DynamicAccessEntities.Add(new DynamicAccessEntity() { Name                   = name });
             }
 
             SeedData(() => SaveChanges());
@@ -112,21 +120,37 @@ namespace IntelligentData.Tests.Examples
         public static IServiceProvider CreateServiceProvider<TContext>(ITestOutputHelper outputHelper, IUserInformationProvider currentUserProvider = null, bool withTempTables = true, bool seed = true) where TContext : ExampleContext
         {
             var col = new ServiceCollection();
-            
+
             var logger = new TestOutputLogger(outputHelper);
-            
+
             col.AddSingleton<ILogger>(logger);
             col.AddSingleton<ILoggerProvider>(logger);
             col.AddSingleton<ILoggerFactory>(logger);
 
-            if (currentUserProvider is null) currentUserProvider = new ExampleUserInformationProvider() {CurrentUser = ExampleUserInformationProvider.Users.Maximillian};
+            var cfgBuilder = new ConfigurationBuilder();
+            cfgBuilder.AddInMemoryCollection(
+                new Dictionary<string, string>()
+                {
+                    { "Engine", "Sqlite" },
+                    { "ConnectionString", "DataSource=:memory:" },
+                    { "ServerType", "" },   // MySQL/MariaDB
+                    { "ServerVersion", "" } // MySQL/MariaDB
+                }
+            );
+            cfgBuilder.AddJsonFile(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData).Replace('\\', '/').TrimEnd('/') + "/IntelligentData/test-config.json", true, false);
+            cfgBuilder.AddJsonFile(Environment.CurrentDirectory.Replace('\\', '/').TrimEnd('/') + "/test-config.json", true, false);
+            cfgBuilder.AddEnvironmentVariables("IDATA_TEST_");
+            var cfg = cfgBuilder.Build();
+            col.AddSingleton<IConfiguration>(cfg);
+
+            if (currentUserProvider is null) currentUserProvider = new ExampleUserInformationProvider() { CurrentUser = ExampleUserInformationProvider.Users.Maximillian };
 
             col.AddSingleton<IUserInformationProvider>(currentUserProvider);
 
-            var options = CreateOptions<TContext>(withTempTables);
-            
+            var options = CreateOptions<TContext>(cfg, withTempTables);
+
             col.AddSingleton<DbContextOptions<TContext>>(options);
-            
+
             col.AddSingleton<DbContextOptions>(options);
 
             col.AddDbContext<TContext>();
@@ -155,24 +179,112 @@ namespace IntelligentData.Tests.Examples
             return sp;
         }
 
-        public static IServiceProvider CreateServiceProvider(ITestOutputHelper outputHelper, IUserInformationProvider currentUserProvider = null,  bool withTempTables = true, bool seed = true)
+        public static IServiceProvider CreateServiceProvider(ITestOutputHelper outputHelper, IUserInformationProvider currentUserProvider = null, bool withTempTables = true, bool seed = true)
             => CreateServiceProvider<ExampleContext>(outputHelper, currentUserProvider, withTempTables, seed);
-        
-        private static DbContextOptions<TContext> CreateOptions<TContext>(bool withTempTables = true) where TContext : ExampleContext
+
+        private static DbContextOptions<TContext> CreateOptions<TContext>(IConfiguration config, bool withTempTables = true) where TContext : ExampleContext
         {
-            var defaultConn = new SqliteConnection("DataSource=:memory:");
-            defaultConn.Open();
             var builder = new DbContextOptionsBuilder<TContext>();
-            builder.UseSqlite(defaultConn);
+
+            switch (config["Engine"]?.ToUpper())
+            {
+                case "MYSQL":
+                {
+                    var connString        = config["ConnectionString"];
+                    var connStringBuilder = new MySqlConnectionStringBuilder(connString);
+                    var db                = connStringBuilder.Database;
+
+                    using (var conn = new MySqlConnection(connString))
+                    {
+                        conn.Open();
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            foreach (var name in typeof(TContext)
+                                                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                                                 .Where(x => x.PropertyType.IsGenericType && x.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
+                                                 .Select(x => x.Name)
+                                    )
+                            {
+                                cmd.CommandText = $"DROP TABLE IF EXISTS `{name}`";
+                                cmd.ExecuteNonQuery();
+                                cmd.CommandText = $"DROP TABLE IF EXISTS `EX_{name}`";
+                                cmd.ExecuteNonQuery();
+                            }
+                            
+                            cmd.CommandText = $"DROP TABLE IF EXISTS EX__ReadOnly";
+                            cmd.ExecuteNonQuery();
+                            cmd.CommandText = "DROP TABLE IF EXISTS ID__TempListGuid";
+                            cmd.ExecuteNonQuery();
+                            cmd.CommandText = "DROP TABLE IF EXISTS ID__TempListInt32";
+                            cmd.ExecuteNonQuery();
+                            cmd.CommandText = "DROP TABLE IF EXISTS ID__TempListInt64";
+                            cmd.ExecuteNonQuery();
+                            cmd.CommandText = "DROP TABLE IF EXISTS ID__TempListString";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    Enum.TryParse<ServerType>(config["ServerType"], true, out var serverType);
+                    Version.TryParse(config["ServerVersion"], out var serverVersion);
+
+                    builder.UseMySql(connString, ServerVersion.Create(serverVersion, serverType));
+                }
+                    break;
+                case "MSSQL":
+                {
+                    var connString        = config["ConnectionString"];
+                    
+                    using (var conn = new SqlConnection(connString))
+                    {
+                        conn.Open();
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            foreach (var name in typeof(TContext)
+                                                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                                                 .Where(x => x.PropertyType.IsGenericType && x.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
+                                                 .Select(x => x.Name)
+                                    )
+                            {
+                                cmd.CommandText = $"DROP TABLE IF EXISTS [{name}]";
+                                cmd.ExecuteNonQuery();
+                                cmd.CommandText = $"DROP TABLE IF EXISTS [EX_{name}]";
+                                cmd.ExecuteNonQuery();
+                            }
+                            
+                            cmd.CommandText = $"DROP TABLE IF EXISTS EX__ReadOnly";
+                            cmd.ExecuteNonQuery();
+                            cmd.CommandText = "DROP TABLE IF EXISTS ID__TempListGuid";
+                            cmd.ExecuteNonQuery();
+                            cmd.CommandText = "DROP TABLE IF EXISTS ID__TempListInt32";
+                            cmd.ExecuteNonQuery();
+                            cmd.CommandText = "DROP TABLE IF EXISTS ID__TempListInt64";
+                            cmd.ExecuteNonQuery();
+                            cmd.CommandText = "DROP TABLE IF EXISTS ID__TempListString";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    builder.UseSqlServer(connString);
+                }
+                    break;
+                case "SQLITE":
+                default:
+                {
+                    var defaultConn = new SqliteConnection("DataSource=:memory:");
+                    defaultConn.Open();
+                    builder.UseSqlite(defaultConn);
+                }
+                    break;
+            }
+
             if (withTempTables)
             {
                 builder.WithTemporaryLists();
             }
+
             return builder.Options;
         }
 
-        private static DbContextOptions<ExampleContext> CreateOptions(bool withTempTables = true) => CreateOptions<ExampleContext>();
-        
         public static TContext CreateContext<TContext>(ITestOutputHelper outputHelper, bool seed = false, IUserInformationProvider currentUserProvider = null, bool withTempTables = true) where TContext : ExampleContext
             => CreateServiceProvider<TContext>(outputHelper, currentUserProvider, withTempTables, seed).GetRequiredService<TContext>();
 
@@ -181,7 +293,7 @@ namespace IntelligentData.Tests.Examples
 
         public static TContext CreateContext<TContext>(ITestOutputHelper outputHelper, out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider currentUserProvider = null, bool withTempTables = true) where TContext : ExampleContext
         {
-            var sp      = CreateServiceProvider<TContext>(outputHelper, currentUserProvider,withTempTables, seed);
+            var sp = CreateServiceProvider<TContext>(outputHelper, currentUserProvider, withTempTables, seed);
 
             secondaryContext = sp.CreateScope().ServiceProvider.GetRequiredService<TContext>();
             return sp.CreateScope().ServiceProvider.GetRequiredService<TContext>();
@@ -189,7 +301,6 @@ namespace IntelligentData.Tests.Examples
 
         public static ExampleContext CreateContext(ITestOutputHelper outputHelper, out ExampleContext secondaryContext, bool seed = false, IUserInformationProvider currentUserProvider = null, bool withTempTables = true)
             => CreateContext<ExampleContext>(outputHelper, out secondaryContext, seed, currentUserProvider, withTempTables);
-
 
         #endregion
     }

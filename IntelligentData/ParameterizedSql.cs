@@ -46,7 +46,7 @@ namespace IntelligentData
 )"; // note that contents of parens are not further processed and may break if a paren appears within a string inside a paren block.
 
         // ReSharper disable once StaticMemberInGenericType
-        private static readonly Regex SelectRipper = new Regex(
+        private static readonly Regex SelectRipper = new(
             $@"\A\s*
 (?<WITH>WITH\s+\{{[^}}]*\}})?
 SELECT

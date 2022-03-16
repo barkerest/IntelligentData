@@ -8,6 +8,8 @@ using Xunit.Abstractions;
 
 namespace IntelligentData.Tests
 {
+    [Collection("Database Instance")]
+
     public class EntityUpdateCommands_Should : IDisposable
     {
         private readonly ITestOutputHelper _output;
