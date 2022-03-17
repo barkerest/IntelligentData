@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using IntelligentData.Extensions;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
@@ -11,50 +10,35 @@ namespace IntelligentData.Internal
 {
     internal static class InExpressionPatch
     {
-        internal static void PatchInExpressions(this SelectExpression expression, RelationalQueryContext context, List<string>? usedParams = null)
+        internal static SelectExpression PatchInExpressions(this SelectExpression expression, RelationalQueryContext context, List<string>? usedParams = null)
         {
-            expression.Having?.PatchInExpressions(context, usedParams);
-            expression.Limit?.PatchInExpressions(context, usedParams);
-            expression.Offset?.PatchInExpressions(context, usedParams);
-            expression.Predicate?.PatchInExpressions(context, usedParams);
-
-            foreach (var order in expression.Orderings)
-            {
-                order.Expression.PatchInExpressions(context, usedParams);
-            }
-        
-            foreach (var projection in expression.Projection)
-            {
-                projection.Expression.PatchInExpressions(context, usedParams);
-            }
-        
-            foreach (var table in expression.Tables)
-            {
-                table.PatchInExpressions(context, usedParams);
-            }
-        
-            foreach (var groupBy in expression.GroupBy)
-            {
-                groupBy.PatchInExpressions(context, usedParams);
-            }
+            return
+                expression.Update(
+                    expression.Projection.Select(e => e.Update(e.Expression.PatchInExpressions(context, usedParams))).ToArray(),
+                    expression.Tables.Select(e => e.PatchInExpressions(context, usedParams)).ToArray(),
+                    expression.Predicate?.PatchInExpressions(context, usedParams),
+                    expression.GroupBy.Select(e => e.PatchInExpressions(context, usedParams)).ToArray(),
+                    expression.Having?.PatchInExpressions(context, usedParams),
+                    expression.Orderings.Select(e => e.Update(e.Expression.PatchInExpressions(context, usedParams))).ToArray(),
+                    expression.Limit?.PatchInExpressions(context, usedParams),
+                    expression.Offset?.PatchInExpressions(context, usedParams)
+                );
         }
 
-        private static void PatchInExpressions(this InExpression expression, RelationalQueryContext context, List<string>? usedParams = null)
+        private static InExpression PatchInExpressions(this InExpression expression, RelationalQueryContext context, List<string>? usedParams = null)
         {
-            expression.Item.PatchInExpressions(context, usedParams);
-
-            expression.Subquery?.PatchInExpressions(context, usedParams);
-
-            if (expression.Values is null) return;
-
-            // The version of VisitIn in EF Core 3.1.1 has two requirements.
-            // 1) The Values must be from a SqlConstantExpression
-            // 2) The Value from the SqlConstantExpression must be castable to IEnumerable<object>
+            var item     = expression.Item.PatchInExpressions(context, usedParams);
+            var subquery = expression.Subquery?.PatchInExpressions(context, usedParams);
             
-            var currentValue = expression.Values;
+            // VisitIn has two requirements for the Values expression.
+            // 1) The Values must castable to a SqlConstantExpression
+            // 2) The Value from the SqlConstantExpression must be castable to IEnumerable<object>
 
-            switch (currentValue)
+            switch (expression.Values)
             {
+                case null:
+                    return expression.Update(item, null, subquery);
+                
                 case SqlParameterExpression paramEx:
                 {
                     // Fix issue 1 & 2 by grabbing the parameter and converting to a constant IEnumerable<object>.
@@ -64,134 +48,173 @@ namespace IntelligentData.Internal
                     {
                         usedParams.Add(paramEx.Name);
                     }
-                    
-                    var newVal = (value as IEnumerable)?.Cast<object>().ToArray() ?? Array.Empty<object>();
-                    var newEx = new SqlConstantExpression(Expression.Constant(newVal), paramEx.TypeMapping);
-                    if (!expression.SetNonPublicProperty("Values", newEx))
-                    {
-                        throw new InvalidOperationException("Could not update Values for InExpression.");
-                    }
 
-                    break;
+                    var newVal = (value as IEnumerable)?.Cast<object>().ToArray() ?? Array.Empty<object>();
+                    return expression.Update(
+                        item,
+                        new SqlConstantExpression(Expression.Constant(newVal), paramEx.TypeMapping),
+                        subquery
+                    );
                 }
-                
+
                 case SqlConstantExpression sqlConstEx:
                 {
                     // Fix issue 2, castable to IEnumerable<object>
-                    var constEx = sqlConstEx.GetNonPublicField<ConstantExpression>("_constantExpression");
-                    var newVal  = (constEx?.Value as IEnumerable)?.Cast<object>().ToArray() ?? Array.Empty<object>();
-                    var newEx = new SqlConstantExpression(Expression.Constant(newVal), sqlConstEx.TypeMapping);
-                    if (!expression.SetNonPublicProperty("Values", newEx))
-                    {
-                        throw new InvalidOperationException("Could not update Values for InExpression.");
-                    }
-                    break;
-                }
                     
+                    var newVal  = (sqlConstEx.Value as IEnumerable)?.Cast<object>().ToArray() ?? Array.Empty<object>();
+                    return expression.Update(
+                        item,
+                        new SqlConstantExpression(Expression.Constant(newVal), sqlConstEx.TypeMapping),
+                        subquery
+                    );
+                }
+
                 default:
-                    throw new InvalidOperationException($"Don't know how to convert {currentValue.GetType()} to SqlConstantExpression.");
+                    throw new InvalidOperationException($"Don't know how to convert {expression.Values.GetType()} to SqlConstantExpression.");
             }
         }
 
-        private static void PatchInExpressions(this TableExpressionBase expression, RelationalQueryContext context, List<string>? usedParams = null)
+        private static TableExpressionBase PatchInExpressions(this TableExpressionBase expression, RelationalQueryContext context, List<string>? usedParams = null)
         {
             switch (expression)
             {
                 case TableExpression _:
                 case FromSqlExpression _:
-                    break;
-                
+                    return expression;
+
                 case SelectExpression selectExpression:
-                    selectExpression.PatchInExpressions(context, usedParams);
-                    break;
+                    return selectExpression.PatchInExpressions(context, usedParams);
+
+                case TableValuedFunctionExpression tableValuedFunctionExpression:
+                    return tableValuedFunctionExpression.Update(
+                        tableValuedFunctionExpression.Arguments.Select(e => e.PatchInExpressions(context, usedParams)).ToArray()
+                    );
                 
-                case JoinExpressionBase joinExpression:
-                    joinExpression.Table.PatchInExpressions(context, usedParams);
-                    break;
+                case CrossJoinExpression crossJoinExpression:
+                    return crossJoinExpression.Update(
+                        crossJoinExpression.Table.PatchInExpressions(context, usedParams)
+                    );
+                    
+                case InnerJoinExpression innerJoinExpression:
+                    return innerJoinExpression.Update(
+                        innerJoinExpression.Table.PatchInExpressions(context, usedParams),
+                        innerJoinExpression.JoinPredicate.PatchInExpressions(context, usedParams)
+                    );
+                    
+                case LeftJoinExpression leftJoinExpression:
+                    return leftJoinExpression.Update(
+                        leftJoinExpression.Table.PatchInExpressions(context, usedParams),
+                        leftJoinExpression.JoinPredicate.PatchInExpressions(context, usedParams)
+                    );
                 
-                case SetOperationBase setOperation:
-                    setOperation.Source1.PatchInExpressions(context, usedParams);
-                    setOperation.Source2.PatchInExpressions(context, usedParams);
-                    break;
+                case OuterApplyExpression outerApplyExpression:
+                    return outerApplyExpression.Update(
+                        outerApplyExpression.Table.PatchInExpressions(context, usedParams)
+                    );
+
+                case CrossApplyExpression crossApplyExpression:
+                    return crossApplyExpression.Update(
+                        crossApplyExpression.Table.PatchInExpressions(context, usedParams)
+                    );
+                    
+                case ExceptExpression exceptExpression:
+                    return exceptExpression.Update(
+                        exceptExpression.Source1.PatchInExpressions(context, usedParams),
+                        exceptExpression.Source2.PatchInExpressions(context, usedParams)
+                    );
+                
+                case IntersectExpression intersectExpression:
+                    return intersectExpression.Update(
+                        intersectExpression.Source1.PatchInExpressions(context, usedParams),
+                        intersectExpression.Source2.PatchInExpressions(context, usedParams)
+                    );
+                
+                case UnionExpression unionExpression:
+                    return unionExpression.Update(
+                        unionExpression.Source1.PatchInExpressions(context, usedParams),
+                        unionExpression.Source2.PatchInExpressions(context, usedParams)
+                    );
                 
                 default:
                     throw new InvalidOperationException($"Unknown table expression type: {expression.GetType()}");
             }
         }
 
-        private static void PatchInExpressions(this SqlExpression expression, RelationalQueryContext context, List<string>? usedParams = null)
+        private static SqlExpression PatchInExpressions(this SqlExpression expression, RelationalQueryContext context, List<string>? usedParams = null)
         {
             switch (expression)
             {
                 case InExpression inExpression:
-                    inExpression.PatchInExpressions(context, usedParams);
-                    break;
+                    return inExpression.PatchInExpressions(context, usedParams);
 
                 case SqlUnaryExpression sqlUnaryExpression:
-                    sqlUnaryExpression.Operand.PatchInExpressions(context, usedParams);
-                    break;
+                    return sqlUnaryExpression.Update(
+                        sqlUnaryExpression.Operand.PatchInExpressions(context, usedParams)
+                    );
 
                 case CaseExpression caseExpression:
-                    foreach (var whenClause in caseExpression.WhenClauses)
-                    {
-                        whenClause.Result.PatchInExpressions(context, usedParams);
-                        whenClause.Test.PatchInExpressions(context, usedParams);
-                    }
-                    caseExpression.ElseResult?.PatchInExpressions(context, usedParams);
-                    break;
+                    return caseExpression.Update(
+                        caseExpression.Operand?.PatchInExpressions(context, usedParams),
+                        caseExpression.WhenClauses.Select(
+                                          e => new CaseWhenClause(
+                                              e.Test.PatchInExpressions(context, usedParams),
+                                              e.Result.PatchInExpressions(context, usedParams)
+                                          )
+                                      )
+                                      .ToArray(),
+                        caseExpression.ElseResult?.PatchInExpressions(context, usedParams)
+                    );
 
                 case ExistsExpression existsExpression:
-                    existsExpression.Subquery.PatchInExpressions(context, usedParams);
-                    break;
+                    return existsExpression.Update(
+                        existsExpression.Subquery.PatchInExpressions(context, usedParams)
+                    );
 
                 case LikeExpression likeExpression:
-                    likeExpression.Match.PatchInExpressions(context, usedParams);
-                    likeExpression.Pattern.PatchInExpressions(context, usedParams);
-                    likeExpression.EscapeChar?.PatchInExpressions(context, usedParams);
-                    break;
+                    return likeExpression.Update(
+                        likeExpression.Match.PatchInExpressions(context, usedParams),
+                        likeExpression.Pattern.PatchInExpressions(context, usedParams),
+                        likeExpression.EscapeChar?.PatchInExpressions(context, usedParams)
+                    );
 
                 case RowNumberExpression rowNumberExpression:
-                    foreach (var order in rowNumberExpression.Orderings)
-                    {
-                        order.Expression.PatchInExpressions(context, usedParams);
-                    }
-                    
-                    foreach (var partition in rowNumberExpression.Partitions)
-                    {
-                        partition.PatchInExpressions(context, usedParams);
-                    }
-                    break;
+                    return rowNumberExpression.Update(
+                        rowNumberExpression.Partitions.Select(e => e.PatchInExpressions(context, usedParams)).ToArray(),
+                        rowNumberExpression.Orderings.Select(
+                                               e => new OrderingExpression(
+                                                   e.Expression.PatchInExpressions(context, usedParams),
+                                                   e.IsAscending
+                                               )
+                                           )
+                                           .ToArray()
+                    );
 
                 case ScalarSubqueryExpression scalarSubqueryExpression:
-                    scalarSubqueryExpression.Subquery.PatchInExpressions(context, usedParams);
-                    break;
+                    return scalarSubqueryExpression.Update(
+                        scalarSubqueryExpression.Subquery.PatchInExpressions(context, usedParams)
+                    );
 
                 case SqlBinaryExpression sqlBinaryExpression:
-                    sqlBinaryExpression.Left.PatchInExpressions(context, usedParams);
-                    sqlBinaryExpression.Right.PatchInExpressions(context, usedParams);
-                    break;
+                    return sqlBinaryExpression.Update(
+                        sqlBinaryExpression.Left.PatchInExpressions(context, usedParams),
+                        sqlBinaryExpression.Right.PatchInExpressions(context, usedParams)
+                    );
 
                 case SqlFunctionExpression sqlFunctionExpression:
-                    if (sqlFunctionExpression.Arguments is not null)
-                    {
-                        foreach (var argument in sqlFunctionExpression.Arguments)
-                        {
-                            argument.PatchInExpressions(context, usedParams);
-                        }
-                    }
-
-                    break;
+                    return sqlFunctionExpression.Update(
+                        sqlFunctionExpression.Instance?.PatchInExpressions(context, usedParams),
+                        sqlFunctionExpression.Arguments?.Select(e => e.PatchInExpressions(context, usedParams)).ToArray()
+                    );
 
                 case SqlFragmentExpression _:
                 case ColumnExpression _:
                 case SqlConstantExpression _:
                 case SqlParameterExpression _:
-                    break;
+                    return expression;
 
                 default:
                     throw new InvalidOperationException($"Unknown SQL expression type: {expression.GetType()}");
             }
         }
-        
     }
 }

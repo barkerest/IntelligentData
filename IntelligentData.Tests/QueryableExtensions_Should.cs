@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using IntelligentData.Extensions;
+using IntelligentData.Interfaces;
 using IntelligentData.Tests.Examples;
 using Xunit;
 using Xunit.Abstractions;
@@ -100,14 +102,24 @@ namespace IntelligentData.Tests
             }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private ParameterizedSql<ReadInsertUpdateEntity> GenerateFilteredSql(params string[] list)
+        {
+            _output.WriteLine("List: [" + string.Join(", ", list) + "]");
+            var qry = _db.ReadInsertUpdateEntities.Where(r => list.Contains(r.Name));
+            
+            // execute the query
+            Assert.NotNull(qry.ToArray());
+            
+            // return the parameterized SQL.
+            return qry.ToParameterizedSql();
+        }
+
         [Fact]
         public void GenerateDifferentSqlWithDifferentFilterLists()
         {
-            var list = new[] { "John", "George", "Larry" };
-            var sql1 = _db.ReadInsertUpdateEntities.Where(r => list.Contains(r.Name)).ToParameterizedSql();
-            
-            var list2 = new[] { "Lynn", "Mary", "Sara" };
-            var sql2  = _db.ReadInsertUpdateEntities.Where(r => list2.Contains(r.Name)).ToParameterizedSql();
+            var sql1 = GenerateFilteredSql("John", "George", "Larry");
+            var sql2 = GenerateFilteredSql("Lynn", "Mary", "Sara");
             
             _output.WriteLine($"1: {sql1}\n2: {sql2}");
             Assert.NotEqual(sql1.SqlText, sql2.SqlText);

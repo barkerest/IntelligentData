@@ -149,6 +149,13 @@ Check out the tests for examples of how the various features are supposed to wor
 
 ## Version History
 
+* __6.0.3__ 2022-03-17
+  Fixed bugs related to ParameterizedSql generation.
+
+* __6.0.2__ 2022-03-16
+  Fix bugs related to closed connections in EntityUpdateCommands.
+  Update the testing to be able to test MySql and SqlServer in addition to Sqlite.
+
 * __6.0.1__ 2022-02-10  
   Fix minor typos in the readme file.
 

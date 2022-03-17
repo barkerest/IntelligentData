@@ -133,8 +133,8 @@ namespace IntelligentData.Tests.Examples
                 {
                     { "Engine", "Sqlite" },
                     { "ConnectionString", "DataSource=:memory:" },
-                    { "ServerType", "" },   // MySQL/MariaDB
-                    { "ServerVersion", "" } // MySQL/MariaDB
+                    { "ServerType", "" },    // MySQL/MariaDB
+                    { "ServerVersion", "" }, // MySQL/MariaDB
                 }
             );
             cfgBuilder.AddJsonFile(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData).Replace('\\', '/').TrimEnd('/') + "/IntelligentData/test-config.json", true, false);
@@ -147,7 +147,7 @@ namespace IntelligentData.Tests.Examples
 
             col.AddSingleton<IUserInformationProvider>(currentUserProvider);
 
-            var options = CreateOptions<TContext>(cfg, withTempTables);
+            var options = CreateOptions<TContext>(cfg, logger, withTempTables);
 
             col.AddSingleton<DbContextOptions<TContext>>(options);
 
@@ -157,23 +157,32 @@ namespace IntelligentData.Tests.Examples
 
             var sp = col.BuildServiceProvider();
 
-            using (var scope = sp.CreateScope())
+            try
             {
-                using (var preContext = scope.ServiceProvider.GetRequiredService<TContext>())
-                {
-                    preContext.Database.EnsureCreated();
-                }
-            }
-
-            if (seed)
-            {
+                TestOutputLogger.SkipLogging = true;
+                
                 using (var scope = sp.CreateScope())
                 {
                     using (var preContext = scope.ServiceProvider.GetRequiredService<TContext>())
                     {
-                        preContext.Seed();
+                        preContext.Database.EnsureCreated();
                     }
                 }
+
+                if (seed)
+                {
+                    using (var scope = sp.CreateScope())
+                    {
+                        using (var preContext = scope.ServiceProvider.GetRequiredService<TContext>())
+                        {
+                            preContext.Seed();
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                TestOutputLogger.SkipLogging = false;
             }
 
             return sp;
@@ -182,7 +191,7 @@ namespace IntelligentData.Tests.Examples
         public static IServiceProvider CreateServiceProvider(ITestOutputHelper outputHelper, IUserInformationProvider currentUserProvider = null, bool withTempTables = true, bool seed = true)
             => CreateServiceProvider<ExampleContext>(outputHelper, currentUserProvider, withTempTables, seed);
 
-        private static DbContextOptions<TContext> CreateOptions<TContext>(IConfiguration config, bool withTempTables = true) where TContext : ExampleContext
+        private static DbContextOptions<TContext> CreateOptions<TContext>(IConfiguration config, ILoggerFactory logger, bool withTempTables = true) where TContext : ExampleContext
         {
             var builder = new DbContextOptionsBuilder<TContext>();
 
@@ -227,7 +236,7 @@ namespace IntelligentData.Tests.Examples
                     Enum.TryParse<ServerType>(config["ServerType"], true, out var serverType);
                     Version.TryParse(config["ServerVersion"], out var serverVersion);
 
-                    builder.UseMySql(connString, ServerVersion.Create(serverVersion, serverType));
+                    builder.UseMySql(connString, ServerVersion.Create(serverVersion, serverType)).EnableSensitiveDataLogging().UseLoggerFactory(logger);
                 }
                     break;
                 case "MSSQL":
@@ -264,7 +273,7 @@ namespace IntelligentData.Tests.Examples
                         }
                     }
 
-                    builder.UseSqlServer(connString);
+                    builder.UseSqlServer(connString).EnableSensitiveDataLogging().UseLoggerFactory(logger);
                 }
                     break;
                 case "SQLITE":
@@ -272,7 +281,7 @@ namespace IntelligentData.Tests.Examples
                 {
                     var defaultConn = new SqliteConnection("DataSource=:memory:");
                     defaultConn.Open();
-                    builder.UseSqlite(defaultConn);
+                    builder.UseSqlite(defaultConn).EnableSensitiveDataLogging().UseLoggerFactory(logger);
                 }
                     break;
             }

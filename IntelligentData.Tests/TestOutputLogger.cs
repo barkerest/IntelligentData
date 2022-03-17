@@ -63,8 +63,20 @@ namespace IntelligentData.Tests
             }
         }
 
-        public bool IsEnabled(LogLevel logLevel) 
-            => true;
+        public static bool SkipLogging { get; set; }
+        
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            if (SkipLogging) return (int)logLevel >= (int)LogLevel.Error;
+            
+            var state = _state?.ToString() ?? "";
+
+            if (state.StartsWith("Microsoft.EntityFrameworkCore.Database.Command")) return (int)logLevel >= (int)LogLevel.Information;
+            if (state.StartsWith("Microsoft.") ||
+                state.StartsWith("System.")) return (int)logLevel >= (int)LogLevel.Warning;
+
+            return true;
+        }
 
         public IDisposable BeginScope<TState>(TState state) => new StateWrapper(this, state);
             

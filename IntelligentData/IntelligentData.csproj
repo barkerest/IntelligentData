@@ -5,7 +5,7 @@
         <Authors>Beau Barker</Authors>
         <Copyright>Copyright © 2020-2022 Beau Barker</Copyright>
         <Product>IntelligentData</Product>
-        <Version>6.0.2</Version>
+        <Version>6.0.3</Version>
         <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageProjectUrl>https://github.com/barkerest/IntelligentData</PackageProjectUrl>
@@ -13,8 +13,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.1" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.1" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.3" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.3" />
     </ItemGroup>
 
     <ItemGroup>
