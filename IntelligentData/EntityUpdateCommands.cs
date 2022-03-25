@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -442,7 +443,7 @@ namespace IntelligentData
         {
             try
             {
-                var conn = Context.Database.GetDbConnection();
+                var conn = cmd.Transaction?.Connection as DbConnection ?? Context.Database.GetDbConnection();
                 var open = conn.State == ConnectionState.Open;
                 if (!open)
                 {
@@ -477,7 +478,7 @@ namespace IntelligentData
         {
             try
             {
-                var conn = Context.Database.GetDbConnection();
+                var conn = cmd.Transaction?.Connection as DbConnection ?? Context.Database.GetDbConnection();
                 var open = conn.State == ConnectionState.Open;
                 if (!open)
                 {
@@ -539,43 +540,6 @@ namespace IntelligentData
         #endregion
 
         #region Insert
-
-        private IDbCommand?                                  _insertWithReturnCommand;
-        private IDictionary<string, Func<TEntity, object?>>? _insertWithReturnParameters;
-
-        private (IDbCommand, IDictionary<string, Func<TEntity, object?>>) GetInsertWithReturnCommand(IDbTransaction? transaction)
-        {
-            if (_insertWithReturnCommand is not null &&
-                _insertWithReturnParameters is not null)
-            {
-                _insertWithReturnCommand.Transaction = transaction;
-                return (_insertWithReturnCommand, _insertWithReturnParameters);
-            }
-
-            var ins = GetInsertCommand(null);
-            var ret = GetLastInsertIdCommand(null);
-
-            var cmd = (transaction?.Connection as DbConnection ?? Context.Database.GetDbConnection()).CreateCommand();
-            cmd.CommandText                      = ins.Item1.CommandText + "; " + ret.CommandText;
-            cmd.Parameters.AddRange(
-                ins.Item1.Parameters.Cast<DbParameter>()
-                   .Select(
-                       p =>
-                       {
-                           var r = cmd.CreateParameter();
-                           r.ParameterName = p.ParameterName;
-                           r.Value         = p.Value;
-                           return r;
-                       }
-                   )
-                   .ToArray()
-            );
-            _insertWithReturnCommand             = cmd;
-            _insertWithReturnParameters          = ins.Item2;
-            _insertWithReturnCommand.Transaction = transaction;
-            
-            return (_insertWithReturnCommand, _insertWithReturnParameters);
-        }
 
         private IDbCommand?                                  _insertCommand;
         private IDictionary<string, Func<TEntity, object?>>? _insertParameters;
@@ -694,19 +658,37 @@ namespace IntelligentData
             return _lastInsertIdCommand;
         }
 
+        private static bool IsBlankId([NotNullWhen(false)]object? val)
+            => val switch
+            {
+                null       => true,
+                byte u8    => u8 == 0,
+                sbyte i8   => i8 == 0,
+                ushort u16 => u16 == 0,
+                short i16  => i16 == 0,
+                uint u32   => u32 == 0,
+                int i32    => i32 == 0,
+                ulong u64  => u64 == 0,
+                long i64   => i64 == 0,
+                string s   => string.IsNullOrWhiteSpace(s),
+                Guid guid  => guid == Guid.Empty,
+                _          => false
+            };
+        
         /// <inheritdoc />
         public virtual bool Insert(TEntity entity, IDbTransaction? transaction)
         {
-            
             if (Key.Properties.Count == 1)
             {
+                if (!ExecuteCommand(entity, GetInsertCommand(transaction))) return false;
+
                 var prop = Key.Properties[0];
                 if (prop.ValueGenerated == ValueGenerated.OnAdd &&
                     prop.ClrType.IsPrimitive)
                 {
-                    var lastId = ExecuteCommandForValue(entity, GetInsertWithReturnCommand(transaction));
-                    if (lastId is null ||
-                        Convert.ToInt64(lastId) == 0)
+                    
+                    var lastId = ExecScalar(GetLastInsertIdCommand(transaction));
+                    if (IsBlankId(lastId))
                     {
                         return false;
                     }
@@ -737,7 +719,7 @@ namespace IntelligentData
             {
                 if (!ExecuteCommand(entity, GetInsertCommand(transaction))) return false;
             }
-
+            
             Context.Entry(entity).State = EntityState.Detached;
 
             return true;
