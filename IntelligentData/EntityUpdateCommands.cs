@@ -555,7 +555,7 @@ namespace IntelligentData
             var ins = GetInsertCommand(null);
             var ret = GetLastInsertIdCommand(null);
 
-            var cmd = Context.Database.GetDbConnection().CreateCommand();
+            var cmd = (transaction?.Connection as DbConnection ?? Context.Database.GetDbConnection()).CreateCommand();
             cmd.CommandText                      = ins.Item1.CommandText + "; " + ret.CommandText;
             cmd.Parameters.AddRange(
                 ins.Item1.Parameters.Cast<DbParameter>()
@@ -588,7 +588,7 @@ namespace IntelligentData
                 return (_insertCommand, _insertParameters);
             }
 
-            var cmd   = Context.Database.GetDbConnection().CreateCommand();
+            var cmd   = (transaction?.Connection as DbConnection ?? Context.Database.GetDbConnection()).CreateCommand();
             var qry   = new StringBuilder();
             var props = GetInsertProperties();
             var first = true;
@@ -687,7 +687,7 @@ namespace IntelligentData
                 return _lastInsertIdCommand;
             }
 
-            _lastInsertIdCommand = Context.Database.GetDbConnection().CreateCommand();
+            _lastInsertIdCommand             = (transaction?.Connection as DbConnection ?? Context.Database.GetDbConnection()).CreateCommand();
             _lastInsertIdCommand.CommandText = Knowledge.GetLastInsertedIdCommand;
 
             _lastInsertIdCommand.Transaction = transaction;
@@ -758,11 +758,11 @@ namespace IntelligentData
                 return (_updateCommand, _updateParameters);
             }
 
-            var cmd = Context.Database.GetDbConnection().CreateCommand();
-            var qry = new StringBuilder();
+            var cmd   = (transaction?.Connection as DbConnection ?? Context.Database.GetDbConnection()).CreateCommand();
+            var qry   = new StringBuilder();
             var props = GetUpdateProperties();
             var first = true;
-            var list = new Dictionary<string, Func<TEntity, object?>>();
+            var list  = new Dictionary<string, Func<TEntity, object?>>();
 
             qry.Append("UPDATE ").Append(Knowledge.QuoteObjectName(TableName)).Append(" SET ");
 
@@ -881,11 +881,11 @@ namespace IntelligentData
                 return (_removeCommand, _removeParameters);
             }
 
-            var cmd = Context.Database.GetDbConnection().CreateCommand();
-            var qry = new StringBuilder();
+            var cmd   = (transaction?.Connection as DbConnection ?? Context.Database.GetDbConnection()).CreateCommand();
+            var qry   = new StringBuilder();
             var props = GetRemoveProperties();
             var first = true;
-            var list = new Dictionary<string, Func<TEntity, object?>>();
+            var list  = new Dictionary<string, Func<TEntity, object?>>();
 
             if (props.Any())
             {
