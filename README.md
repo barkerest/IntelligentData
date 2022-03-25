@@ -149,6 +149,9 @@ Check out the tests for examples of how the various features are supposed to wor
 
 ## Version History
 
+* __6.0.4__ 2022-03-25
+  Fix EntityUpdateCommands to use transaction connection when provided.
+
 * __6.0.3__ 2022-03-17
   Fixed bugs related to ParameterizedSql generation.
 
