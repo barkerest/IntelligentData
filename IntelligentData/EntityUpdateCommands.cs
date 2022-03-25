@@ -560,7 +560,9 @@ namespace IntelligentData
 
             qry.Append("INSERT INTO ").Append(Knowledge.QuoteObjectName(TableName)).Append(" (");
 
-            foreach (var prop in Key.Properties.Where(x => x.ValueGenerated == ValueGenerated.Never))
+            var autoKeyProps = Key.Properties.Where(x => x.ValueGenerated == ValueGenerated.Never).ToArray();
+
+            foreach (var prop in autoKeyProps)
             {
                 var param = AddParameterTo(cmd, $"@p_{list.Count}", prop);
                 if (prop.PropertyInfo is not null)
@@ -589,7 +591,7 @@ namespace IntelligentData
 
             foreach (var prop in props)
             {
-                if (Key.Properties.Contains(prop)) continue;
+                if (autoKeyProps.Contains(prop)) continue;
 
                 if (!first)
                 {
