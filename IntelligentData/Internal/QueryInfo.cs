@@ -19,23 +19,23 @@ namespace IntelligentData.Internal
 
             var provider = query.Provider as EntityQueryProvider
                            ?? throw new ArgumentException("Does not use an entity query provider.", nameof(query));
-            
+
             var enumerator = provider
                              .Execute<IEnumerable>(query.Expression)
                              .GetEnumerator()
                              ?? throw new ArgumentException("Entity provider does not generate an enumerator.");
-            
+
             var commandCache = enumerator.GetNonPublicField<RelationalCommandCache>("_relationalCommandCache")
-                           ?? throw new ArgumentException("Does not appear to be a relational command.", nameof(query));
-            
+                               ?? throw new ArgumentException("Does not appear to be a relational command.", nameof(query));
+
             Context = enumerator.GetNonPublicField<RelationalQueryContext>("_relationalQueryContext")
                       ?? throw new ArgumentException("Does not provide a query context.", nameof(query));
-            
+
             Expression = commandCache.GetNonPublicField<SelectExpression>("_selectExpression")
                          ?? throw new ArgumentException("Does not provide a select expression.", nameof(query));
-            
+
             var sqlGeneratorFactory = commandCache.GetNonPublicField<IQuerySqlGeneratorFactory>("_querySqlGeneratorFactory")
-                                  ?? throw new ArgumentException("Does not provide a SQL generator factory.", nameof(query));
+                                      ?? throw new ArgumentException("Does not provide a SQL generator factory.", nameof(query));
 
             var generator = sqlGeneratorFactory.Create();
 
@@ -49,6 +49,5 @@ namespace IntelligentData.Internal
         public RelationalQueryContext Context { get; }
 
         public IRelationalCommand Command { get; }
-        
     }
 }
