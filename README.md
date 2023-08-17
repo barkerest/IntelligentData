@@ -149,15 +149,20 @@ Check out the tests for examples of how the various features are supposed to wor
 
 ## Version History
 
-* __6.0.4.2__ 2022-03-25
-  Fix EntityUpdateCommands to use transaction connection when provided.
-  Fix EntityUpdateCommands to only exclude explicitly provided key properties on insert if they were automatically included.
+* __6.0.5__ 2023-08-17  
+  Added ThrowOnAccessLevelViolation property to IntelligentDbContext.  
+  When set to true, SaveChanges() will throw a DbUpdateException when a violation is encountered instead of silently
+  removing the violating entity from the change tracker.
+* __6.0.4.2__ 2022-03-25  
+  Fix EntityUpdateCommands to use transaction connection when provided.  
+  Fix EntityUpdateCommands to only exclude explicitly provided key properties on insert if they were automatically
+  included.
 
-* __6.0.3__ 2022-03-17
+* __6.0.3__ 2022-03-17  
   Fixed bugs related to ParameterizedSql generation.
 
-* __6.0.2__ 2022-03-16
-  Fix bugs related to closed connections in EntityUpdateCommands.
+* __6.0.2__ 2022-03-16  
+  Fix bugs related to closed connections in EntityUpdateCommands.  
   Update the testing to be able to test MySql and SqlServer in addition to Sqlite.
 
 * __6.0.1__ 2022-02-10  
@@ -201,7 +206,7 @@ Check out the tests for examples of how the various features are supposed to wor
 
 Licensed under the [MIT License](https://opensource.org/licenses/MIT).
 
-Copyright (C) 2020-2022 Beau Barker
+Copyright (C) 2020-2023 Beau Barker
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 

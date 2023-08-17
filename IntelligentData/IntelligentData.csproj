@@ -3,9 +3,9 @@
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
         <Authors>Beau Barker</Authors>
-        <Copyright>Copyright © 2020-2022 Beau Barker</Copyright>
+        <Copyright>Copyright © 2020-2023 Beau Barker</Copyright>
         <Product>IntelligentData</Product>
-        <Version>6.0.4.2</Version>
+        <Version>6.0.5.0</Version>
         <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageProjectUrl>https://github.com/barkerest/IntelligentData</PackageProjectUrl>

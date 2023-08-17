@@ -47,6 +47,15 @@ namespace IntelligentData.Tests.Examples
 
         public override string TableNamePrefix { get; }
 
+        private bool _throwAccessViolationState = false;
+
+        public override bool ThrowOnAccessLevelViolation => _throwAccessViolationState;
+
+        public void SetThrowOnAccessLevelViolation(bool state)
+        {
+            _throwAccessViolationState = state;
+        }
+
         public ExampleContext(DbContextOptions options, IUserInformationProvider currentUserProvider, ILogger logger)
             : this(options, currentUserProvider, logger, "EX")
         {

@@ -37,6 +37,14 @@ namespace IntelligentData
         public virtual string? TableNamePrefix { get; } = null;
 
         /// <summary>
+        /// Indicates if a DbUpdateException should be thrown on access violations (default: false).
+        /// </summary>
+        /// <remarks>
+        /// The default behavior is to remove the violating entities from the change tracker.
+        /// </remarks>
+        public virtual bool ThrowOnAccessLevelViolation => false;
+        
+        /// <summary>
         /// Constructs the intelligent DB context.
         /// </summary>
         /// <param name="options">The options to construct the DB context with.</param>
@@ -149,12 +157,27 @@ namespace IntelligentData
                 
                 if (entry.State == EntityState.Added)
                 {
+                    if (ThrowOnAccessLevelViolation)
+                    {
+                        throw new DbUpdateException(
+                            $"insert permission was denied on {entry.Entity.GetType()} entity: {entry.Entity}"
+                        );
+                    }
+                    
                     // detach the new item.
                     Entry(entry.Entity)
                         .State = EntityState.Detached;
                 }
                 else
                 {
+                    if (ThrowOnAccessLevelViolation)
+                    {
+                        throw new DbUpdateException(
+                            (entry.State == EntityState.Modified ? "update" : "delete") +
+                            $" permission was denied on {entry.Entity.GetType()} entity: {entry.Entity}"
+                        );
+                    }
+                    
                     // revert changes and set to unchanged.
                     Entry(entry.Entity)
                         .Reload();

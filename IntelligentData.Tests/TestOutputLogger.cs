@@ -2,13 +2,15 @@
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
+#nullable enable
+
 namespace IntelligentData.Tests
 {
     public class TestOutputLogger : ILogger, ILoggerProvider, ILoggerFactory
     {
         private readonly ITestOutputHelper _output;
 
-        private StateWrapper _state = null;
+        private StateWrapper? _state;
 
         private class StateWrapper : IDisposable
         {
@@ -32,7 +34,7 @@ namespace IntelligentData.Tests
                 }
                 else
                 {
-                    _logger.LogWarning($"Dispose out of order! ( {_logger._state._val} <> {_val} )");
+                    _logger.LogWarning($"Dispose out of order! ( {_logger._state?._val} <> {_val} )");
                 }
             }
 
@@ -53,7 +55,7 @@ namespace IntelligentData.Tests
             _output = output ?? throw new ArgumentNullException(nameof(output));
         }
         
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             var msg = ((_state is null) ? "" : (_state + ": ")) + formatter(state, exception);
             var tag = logLevel.ToString().ToUpper() + ": ";
